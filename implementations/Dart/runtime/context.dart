@@ -26,6 +26,8 @@ class EvalContext {
       for (final d in program.declarations) d.name: d
     };
   }
+  
+  RuntimeFunction? getFunction(String name) => _builtinFunctions[name] ?? functions[name];
 
   RuntimeValue resolve(String name) {
     if (values.containsKey(name)) return values[name]!;
