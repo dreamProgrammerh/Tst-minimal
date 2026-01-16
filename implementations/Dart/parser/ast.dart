@@ -22,14 +22,15 @@ class Program {
 // ~~~~~~~~~~~~~~~~~~~~~~
 
 abstract class Expr {
-  const Expr();
+  final Position position;
+  const Expr(this.position);
   RuntimeValue eval(EvalContext ctx);
 }
 
 class InvalidExpr extends Expr {
-  static const instance = InvalidExpr._();
+  static const instance = InvalidExpr._((start: -1, length: 0));
   
-  const InvalidExpr._();
+  const InvalidExpr._(super.position);
   
   @override
   RuntimeValue eval(EvalContext ctx) => InvalidValue.instance;
@@ -37,7 +38,7 @@ class InvalidExpr extends Expr {
 
 class IntExpr extends Expr {
   final int value;
-  IntExpr(this.value);
+  const IntExpr(this.value, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) => IntValue(value);
@@ -45,7 +46,7 @@ class IntExpr extends Expr {
 
 class FloatExpr extends Expr {
   final double value;
-  FloatExpr(this.value);
+  const FloatExpr(this.value, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) => FloatValue(value);
@@ -53,7 +54,7 @@ class FloatExpr extends Expr {
 
 class VarExpr extends Expr {
   final String name;
-  VarExpr(this.name);
+  const VarExpr(this.name, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) => ctx.resolve(name);
@@ -64,7 +65,7 @@ class BinaryExpr extends Expr {
   final TokenType op;
   final Expr right;
 
-  BinaryExpr(this.left, this.op, this.right);
+  const BinaryExpr(this.left, this.op, this.right, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -148,7 +149,7 @@ class UnaryExpr extends Expr {
   final TokenType op;
   final Expr expr;
 
-  UnaryExpr(this.op, this.expr);
+  const UnaryExpr(this.op, this.expr, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -174,7 +175,7 @@ class UnaryExpr extends Expr {
 class NotExpr extends Expr {
   final Expr expr;
 
-  NotExpr(this.expr);
+  const NotExpr(this.expr, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -190,7 +191,7 @@ class CompareExpr extends Expr {
 
   static const double _eps = 1e-6;
 
-  CompareExpr(this.left, this.op, this.right);
+  const CompareExpr(this.left, this.op, this.right, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -243,7 +244,7 @@ class LogicalExpr extends Expr {
   final TokenType op;
   final Expr right;
 
-  LogicalExpr(this.left, this.op, this.right);
+  const LogicalExpr(this.left, this.op, this.right, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -274,7 +275,7 @@ class MergeExpr extends Expr {
   final TokenType op;
   final Expr right;
 
-  MergeExpr(this.left, this.op, this.right);
+  const MergeExpr(this.left, this.op, this.right, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -301,7 +302,7 @@ class FunctionCallExpr extends Expr {
   final String name;
   final List<Expr> args;
 
-  FunctionCallExpr(this.name, this.args);
+  const FunctionCallExpr(this.name, this.args, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
@@ -319,7 +320,7 @@ class TernaryExpr extends Expr {
   final Expr thenExpr;
   final Expr elseExpr;
 
-  TernaryExpr(this.condition, this.thenExpr, this.elseExpr);
+  const TernaryExpr(this.condition, this.thenExpr, this.elseExpr, super.position);
 
   @override
   RuntimeValue eval(EvalContext ctx) {
