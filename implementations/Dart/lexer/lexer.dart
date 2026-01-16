@@ -1,6 +1,7 @@
 import '../constants/const-lexer.dart' as LEXER;
 import '../error/errors.dart';
 import '../error/reporter.dart';
+import '../runtime/colors.dart' as Colors show hexColor;
 import 'source.dart';
 
 enum TokenType {
@@ -36,8 +37,28 @@ class Token {
   const Token(this.type, this.lexeme, this.start);
   
 
-  int? asInt() =>
-    type == TokenType.int32 ? int.parse(lexeme) : null;
+  int? asInt() {
+    switch (type) {
+      case TokenType.int32:
+        return int.parse(lexeme);
+        
+      case TokenType.hexColor:
+        return Colors.hexColor(lexeme);
+        
+      case TokenType.hex:
+        return int.parse(lexeme.substring(2), radix: 16);
+        
+      case TokenType.oct:
+        return int.parse(lexeme.substring(2), radix: 8);
+        
+      case TokenType.bin:
+        return int.parse(lexeme.substring(2), radix: 2);
+      
+      default:
+        return null;
+    }
+    
+  }
   
   double? asFloat() =>
     type == TokenType.float32 ? double.parse(lexeme) : null;
@@ -105,9 +126,14 @@ class Lexer {
 
   List<Token> lex() {
     final tokens = <Token>[];
-    while (!isAtEnd && !reporter.hasBreakError)
-      tokens.add(_nextToken());
+    while (!isAtEnd && !reporter.hasBreakError) {
+      Token? token = _nextToken();
+      if (token == null) break;
+      
+      tokens.add(token);
+    }
 
+    tokens.add(Token(TokenType.eof, '', pos));
     return tokens;
   }
 
@@ -125,12 +151,12 @@ class Lexer {
       while (!isAtEnd && !_match(LEXER.BlockCommentEnd)) pos++;
   }
 
-  Token _nextToken() {
+  Token? _nextToken() {
     _skipWhitespace();
     _skipComments();
     _skipWhitespace();
 
-    if (isAtEnd) return Token(TokenType.eof, '', pos);
+    if (isAtEnd) return null;
     
     for (final op in _operatorMap) {
       final start = pos;
