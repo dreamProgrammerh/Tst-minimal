@@ -22,7 +22,17 @@ class Program {
 // ~~~~~~~~~~~~~~~~~~~~~~
 
 abstract class Expr {
+  const Expr();
   RuntimeValue eval(EvalContext ctx);
+}
+
+class InvalidExpr extends Expr {
+  static const instance = InvalidExpr._();
+  
+  const InvalidExpr._();
+  
+  @override
+  RuntimeValue eval(EvalContext ctx) => InvalidValue.instance;
 }
 
 class IntExpr extends Expr {
