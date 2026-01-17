@@ -4,6 +4,7 @@ import 'values.dart';
 
 typedef BuiltinFunction = RuntimeValue Function(List<RuntimeValue> args);
 typedef RuntimeFunction = RuntimeValue Function(List<RuntimeValue> args);
+typedef EvalMap = Map<String, RuntimeValue>;
  
 final Map<String, BuiltinFunction> _builtinFunctions = {};
 
@@ -15,7 +16,7 @@ class EvalContext {
   final Program program;
   final ErrorReporter reporter;
 
-  final Map<String, RuntimeValue> values = {};
+  final EvalMap values = {};
   final Map<String, RuntimeFunction> functions = {};
   final Set<String> stack = {};
 
@@ -43,7 +44,7 @@ class EvalContext {
       return InvalidValue.instance;
     }
 
-    RuntimeState.pushPosition(decl.position);
+    RuntimeState.pushPosition(decl.expr.position);
     final value = decl.expr.eval(this);
     RuntimeState.popPosition();
 
