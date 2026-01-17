@@ -57,7 +57,12 @@ class VarExpr extends Expr {
   const VarExpr(this.name, super.position);
 
   @override
-  RuntimeValue eval(EvalContext ctx) => ctx.resolve(name);
+  RuntimeValue eval(EvalContext ctx) {
+   RuntimeState.pushPosition(position);
+   final res = ctx.resolve(name);
+   RuntimeState.popPosition();
+   return res;
+  }
 }
 
 class BinaryExpr extends Expr {
@@ -69,69 +74,119 @@ class BinaryExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
     final l = left.eval(ctx);
     final r = right.eval(ctx);
 
     bool intOp = l is IntValue && r is IntValue;
+    RuntimeValue res;
 
     switch (op) {
       case TokenType.plus:
-        if (intOp) return IntValue(l.asInt() + r.asInt());
-        return FloatValue(l.asFloat() + r.asFloat());
+        if (intOp) {
+          res = IntValue(l.asInt() + r.asInt());
+          break;
+        }
+        
+        res = FloatValue(l.asFloat() + r.asFloat());
+        break;
         
       case TokenType.minus:
-        if (intOp) return IntValue(l.asInt() - r.asInt());
-        return FloatValue(l.asFloat() - r.asFloat());
+        if (intOp) {
+          res = IntValue(l.asInt() - r.asInt());
+          break;
+        }
+        
+        res = FloatValue(l.asFloat() - r.asFloat());
+        break;
         
       case TokenType.star:
-        if (intOp) return IntValue(l.asInt() * r.asInt());
-        return FloatValue(l.asFloat() * r.asFloat());
+        if (intOp) {
+          res = IntValue(l.asInt() * r.asInt());
+          break;
+        }
+        
+        res = FloatValue(l.asFloat() * r.asFloat());
+        break;
         
       case TokenType.slash:
-        return FloatValue(l.asFloat() / r.asFloat());
+        res = FloatValue(l.asFloat() / r.asFloat());
+        break;
         
       case TokenType.percent:
-        if (!intOp) throw FormatException('% only allowed for int32');
-        return IntValue(l.asInt() % r.asInt());
+        if (intOp) {
+          res = IntValue(l.asInt() % r.asInt());
+          break;
+        }
+          
+        RuntimeState.error('% only allowed for int32');
+        return InvalidValue.instance;
         
       case TokenType.intDiv:
-        if (!intOp) throw FormatException('IntDiv only allowed for int32');
-        return IntValue(l.asInt() ~/ r.asInt());
+        if (intOp) {
+          res = IntValue(l.asInt() ~/ r.asInt());
+          break;
+        }
+          
+        RuntimeState.error('IntDiv only allowed for int32');
+        res = InvalidValue.instance;
+        break;
+        
         
       case TokenType.power:
-        if (intOp) return IntValue(Math.pow(l.asInt(), r.asInt()) as int);
-        return FloatValue(Math.pow(l.asFloat(), r.asFloat()) as double);
+        if (intOp) {
+          res = IntValue(Math.pow(l.asInt(), r.asInt()) as int);
+          break;
+        }
+        
+        res = FloatValue(Math.pow(l.asFloat(), r.asFloat()) as double);
+        break;
 
 
       case TokenType.bitAnd:
-        return IntValue(_asInt(l) & _asInt(r));
+        res = IntValue(_asInt(l) & _asInt(r));
+        break;
         
       case TokenType.bitOr:
-        return IntValue(_asInt(l) | _asInt(r));
+        res = IntValue(_asInt(l) | _asInt(r));
+        break;
         
       case TokenType.bitXor:
-        return IntValue(_asInt(l) ^ _asInt(r));
+        res = IntValue(_asInt(l) ^ _asInt(r));
+        break;
         
       case TokenType.shiftLeft:
-        return IntValue(_asInt(l) << _asInt(r));
+        res = IntValue(_asInt(l) << _asInt(r));
+        break;
         
       case TokenType.shiftRight:
-        return IntValue(_asInt(l) >> _asInt(r));
+        res = IntValue(_asInt(l) >> _asInt(r));
+        break;
         
       case TokenType.rotLeft:
-        return IntValue(_rotl(_asInt(l), _asInt(r)));
+        res = IntValue(_rotl(_asInt(l), _asInt(r)));
+        break;
         
       case TokenType.rotRight:
-        return IntValue(_rotr(_asInt(l), _asInt(r)));
+        res = IntValue(_rotr(_asInt(l), _asInt(r)));
+        break;
 
       default:
-        throw FormatException('Unsupported binary operator: $op');
+        RuntimeState.error('Unsupported binary operator: $op');
+        res = InvalidValue.instance;
+        break;
     }
+    
+    RuntimeState.popPosition();
+    return res;
   }
 
   int _asInt(RuntimeValue v) {
-    if (v is! IntValue) throw FormatException('Bitwise operation requires int32');
-    return v.asInt();
+    if (v is IntValue) 
+      return v.asInt();
+    
+    RuntimeState.error('Bitwise operation requires int32');
+    return 0;
   }
 
   int _rotl(int v, int n) {
@@ -153,22 +208,32 @@ class UnaryExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
     final v = expr.eval(ctx);
+    RuntimeValue res;
 
     switch (op) {
       case TokenType.minus:
         if (v is IntValue) return IntValue(-v.asInt());
-        return FloatValue(-v.asFloat());
+        res = FloatValue(-v.asFloat());
+        break;
         
       case TokenType.plus:
-        return v; // unary + does nothing
+        res = v; // unary + does nothing
+        break;
         
       case TokenType.bitNot:
-        return IntValue(~v.asInt());
+        res = IntValue(~v.asInt());
+        break;
         
       default:
-        throw FormatException('Unsupported unary operator: $op');
+        RuntimeState.error('Unsupported unary operator: $op');
+        res = InvalidValue.instance;
+        break;
     }
+    
+    RuntimeState.popPosition();
+    return res;
   }
 }
 
@@ -179,8 +244,12 @@ class NotExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
     final v = expr.eval(ctx);
-    return IntValue(v.asFloat() == 0 ? 1 : 0);
+    final res = IntValue(v.asFloat() == 0 ? 1 : 0);
+    RuntimeState.popPosition();
+    
+    return res;
   }
 }
 
@@ -195,13 +264,14 @@ class CompareExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
     final l = left.eval(ctx);
     final r = right.eval(ctx);
 
-    bool result;
+    RuntimeValue? res;
+    bool result = false;
 
     switch (op) {
-
       // non-strict
       case TokenType.equalEqual:
         result = l.asFloat() == r.asFloat();
@@ -230,12 +300,31 @@ class CompareExpr extends Expr {
       case TokenType.notApproxEqual:
         result = (l.asFloat() - r.asFloat()).abs() > _eps;
         break;
+        
+      case TokenType.less:
+        result = l.asFloat() < r.asFloat();
+        break;
+      
+      case TokenType.greater:
+        result = l.asFloat() > r.asFloat();
+        break;
+      
+      case TokenType.lessEqual:
+        result = l.asFloat() <= r.asFloat();
+        break;
+      
+      case TokenType.greaterEqual:
+        result = l.asFloat() >= r.asFloat();
+        break;
 
       default:
-        throw StateError('Invalid comparison operator');
+        RuntimeState.error('Unsupported comparison operator: $op');
+        res = InvalidValue.instance;
+        break;
     }
 
-    return IntValue(result ? 1 : 0);
+    RuntimeState.popPosition();
+    return res ?? IntValue(result ? 1 : 0);
   }
 }
 
@@ -248,25 +337,43 @@ class LogicalExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
     final l = left.eval(ctx);
     final lt = l.asFloat() != 0;
+    
+    RuntimeValue res;
 
     switch (op) {
       case TokenType.logicalAnd:
-        if (!lt) return IntValue(0);
-        return IntValue(right.eval(ctx).asFloat() != 0 ? 1 : 0);
+        if (!lt) {
+          res = IntValue(0);
+          break;
+        }
+        
+        res = IntValue(right.eval(ctx).asFloat() != 0 ? 1 : 0);
+        break;
 
       case TokenType.logicalOr:
-        if (lt) return IntValue(1);
-        return IntValue(right.eval(ctx).asFloat() != 0 ? 1 : 0);
+        if (lt) {
+          res = IntValue(1);
+          break;
+        }
+        
+        res = IntValue(right.eval(ctx).asFloat() != 0 ? 1 : 0);
+        break;
 
       case TokenType.logicalXor:
         final rt = right.eval(ctx).asFloat() != 0;
-        return IntValue((lt ^ rt) ? 1 : 0);
+        res = IntValue((lt ^ rt) ? 1 : 0);
+        break;
 
       default:
-        throw StateError('Invalid logical operator');
+        RuntimeState.error('Invalid logical operator');
+        res = InvalidValue.instance;
     }
+    
+    RuntimeState.popPosition();
+    return res;
   }
 }
 
@@ -279,22 +386,32 @@ class MergeExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
-
+    RuntimeState.pushPosition(position);
+    
+    RuntimeValue res;
+    
     switch (op) {
       case TokenType.coalesce:
         final l = left.eval(ctx);
-        if (l.asFloat() != 0) return l;
-        return right.eval(ctx);
-
+        res = l.asFloat() != 0
+          ? l
+          : right.eval(ctx);
+        break;
+          
       case TokenType.guard:
         final r = right.eval(ctx);
-        if (r.asFloat() != 0)
-          return left.eval(ctx);
-        return IntValue(0);
+        res = r.asFloat() != 0
+          ? left.eval(ctx)
+          : IntValue(0);
+        break;
 
       default:
-        throw StateError('Invalid merge operator');
+        RuntimeState.error('Invalid merge operator');
+        res = InvalidValue.instance;
     }
+    
+    RuntimeState.popPosition();
+    return res;
   }
 }
 
@@ -306,12 +423,22 @@ class FunctionCallExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
+    
+    RuntimeValue res;
+    
     final fn = ctx.getFunction(name);
-    if (fn == null)
-      throw FormatException('Unknown function: $name');
+    if (fn == null) {
+      RuntimeState.error('Unknown function: $name');
+      res = InvalidValue.instance;
+      
+    } else {
+      final evaluatedArgs = args.map((e) => e.eval(ctx)).toList();
+      res = fn(evaluatedArgs);
+    }
 
-    final evaluatedArgs = args.map((e) => e.eval(ctx)).toList();
-    return fn(evaluatedArgs);
+    RuntimeState.popPosition();
+    return res;
   }
 }
 
@@ -324,11 +451,14 @@ class TernaryExpr extends Expr {
 
   @override
   RuntimeValue eval(EvalContext ctx) {
+    RuntimeState.pushPosition(position);
+    
     final cond = condition.eval(ctx);
-    if (cond.asFloat() != 0) {
-      return thenExpr.eval(ctx);
-    } else {
-      return elseExpr.eval(ctx);
-    }
+    RuntimeValue res = cond.asFloat() != 0
+      ? thenExpr.eval(ctx)
+      : elseExpr.eval(ctx);
+    
+    RuntimeState.popPosition();
+    return res;
   }
 }
