@@ -8,10 +8,10 @@ typedef Position = ({int start, int length});
 
 abstract class RuntimeState {
   static late ErrorReporter _reporter;
-  static late Source _source;
+  static late Source? _source;
   static List<Position> _positions = [];
     
-  static void setup(Source source, ErrorReporter reporter) {
+  static void setup(Source? source, ErrorReporter reporter) {
     _source = source;
     _reporter = reporter;
   }
