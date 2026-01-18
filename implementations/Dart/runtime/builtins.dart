@@ -13,7 +13,7 @@ void initBuiltin() {
     int b = args[2].asInt() & 0xff;
     int a = args[3].asInt() & 0xff;
 
-    return IntValue((r << 24) | (g << 16) | (b << 8) | a);
+    return IntValue((a << 24) | (r << 16) | (g << 8) | b);
   });
   
   registerFunction('rgbo', (args) {
@@ -27,7 +27,7 @@ void initBuiltin() {
     int b = args[2].asInt() & 0xff;
     int a = (args[3].asFloat() * 0xff).clamp(0, 0xff).toInt();
 
-    return IntValue((r << 24) | (g << 16) | (b << 8) | a);
+    return IntValue((a << 24) | (r << 16) | (g << 8) | b);
   });
 
   registerFunction('rgb', (args) {
@@ -40,6 +40,6 @@ void initBuiltin() {
     int g = args[1].asInt() & 0xff;
     int b = args[2].asInt() & 0xff;
 
-    return IntValue((r << 24) | (g << 16) | (b << 8) | 0xff);
+    return IntValue((0xff << 24) | (r << 16) | (g << 8) | b);
   });
 }
