@@ -1,5 +1,6 @@
 import 'dart:math' as Math;
 
+import '../constants/const-eval.dart' as EVAL;
 import '../error/reporter.dart';
 import '../lexer/lexer.dart';
 import '../lexer/source.dart';
@@ -110,9 +111,6 @@ int _rotr(int v, int n) {
   n &= 31;
   return ((v >> n) | (v << (32 - n))) & 0xffffffff;
 }
-
-const double _eps = 1e-6;
-
 
 // Eval Functions
 RuntimeValue _evalCall(CallExpr e, EvalContext ctx) {
@@ -277,11 +275,11 @@ RuntimeValue _evalCompareOp(CompareExpr e, EvalContext ctx) {
 
     // approximate
     case TokenType.approxEqual:
-      result = (l.asFloat() - r.asFloat()).abs() <= _eps;
+      result = (l.asFloat() - r.asFloat()).abs() <= EVAL.eps;
       break;
 
     case TokenType.notApproxEqual:
-      result = (l.asFloat() - r.asFloat()).abs() > _eps;
+      result = (l.asFloat() - r.asFloat()).abs() > EVAL.eps;
       break;
       
     case TokenType.less:
