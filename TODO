@@ -1,6 +1,7 @@
 # TODO: Add your notes here
 
-## Implementation of Parser
+# Colors literals
 
-start building the parser based on the prototype
-then write a grammar doc.
+add naitve colors literals like red, blue, yellow etc.
+they not accsesd with $ident this used to accses other attrbuites
+like we have ident() for function if ident without () it will be literal
