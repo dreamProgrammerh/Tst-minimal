@@ -15,6 +15,20 @@ void initBuiltin() {
 
     return IntValue((r << 24) | (g << 16) | (b << 8) | a);
   });
+  
+  registerFunction('rgbo', (args) {
+    if (args.length != 4) {
+      RuntimeState.error('rgbo expects 4 arguments');
+      return InvalidValue.instance;
+    }
+
+    int r = args[0].asInt() & 0xff;
+    int g = args[1].asInt() & 0xff;
+    int b = args[2].asInt() & 0xff;
+    int a = (args[3].asFloat() * 0xff).clamp(0, 0xff).toInt();
+
+    return IntValue((r << 24) | (g << 16) | (b << 8) | a);
+  });
 
   registerFunction('rgb', (args) {
     if (args.length != 3) {
