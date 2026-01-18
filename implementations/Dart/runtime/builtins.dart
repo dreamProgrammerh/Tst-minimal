@@ -3,6 +3,7 @@ import 'context.dart';
 import 'values.dart';
 
 void initBuiltin() {
+  // Color Variants
   registerFuncWithArgs('rgba', 4, (args) {
     int r = args[0].asInt() & 0xff;
     int g = args[1].asInt() & 0xff;
@@ -67,5 +68,82 @@ void initBuiltin() {
     double v = args[2].asFloat();
 
     return IntValue(Colors.hsv(h, s, v));
+  });
+  
+  // Color Manipulations
+  registerFuncWithArgs('lighten', 2, (args) {
+    int color = args[0].asInt();
+    double percent = args[1].asFloat();
+
+    return IntValue(Colors.lightenColor(color, percent));
+  });
+  
+  registerFuncWithArgs('darken', 2, (args) {
+    int color = args[0].asInt();
+    double percent = args[1].asFloat();
+
+    return IntValue(Colors.darkenColor(color, percent));
+  });
+  
+  registerFuncWithArgs('mix', 3, (args) {
+    int color1 = args[0].asInt();
+    int color2 = args[1].asInt();
+    double t = args[2].asFloat();
+
+    return IntValue(Colors.colorMix(color1, color2, t));
+  });
+  
+  registerFuncWithArgs('pressa', 1, (args) {
+    int color = args[0].asInt();
+
+    return IntValue(Colors.premultiplyAlpha(color));
+  });
+  
+  registerFuncWithArgs('invert', 1, (args) {
+    int color = args[0].asInt();
+
+    return IntValue(Colors.invertColor(color));
+  });
+  
+  registerFuncWithArgs('grayscale', 1, (args) {
+    int color = args[0].asInt();
+
+    return IntValue(Colors.toGrayscale(color));
+  });
+  
+  // Color Settings
+  registerFuncWithArgs('opacity', 2, (args) {
+    int color = args[0].asInt();
+    double percent = args[1].asFloat();
+
+    return IntValue(Colors.setOpacity(color, percent));
+  });
+  
+  registerFuncWithArgs('contrast', 2, (args) {
+    int color = args[0].asInt();
+    double factor = args[1].asFloat();
+
+    return IntValue(Colors.adjustContrast(color, factor));
+  });
+  
+  registerFuncWithArgs('hue', 2, (args) {
+    int color = args[0].asInt();
+    double degrees = args[1].asFloat();
+
+    return IntValue(Colors.rotateHue(color, degrees));
+  });
+  
+  registerFuncWithArgs('saturation', 2, (args) {
+    int color = args[0].asInt();
+    double factor = args[1].asFloat();
+
+    return IntValue(Colors.adjustSaturation(color, factor));
+  });
+  
+  registerFuncWithArgs('brightness', 2, (args) {
+    int color = args[0].asInt();
+    int delta = args[1].asInt();
+
+    return IntValue(Colors.adjustBrightness(color, delta));
   });
 }
