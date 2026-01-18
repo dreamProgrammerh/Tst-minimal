@@ -390,7 +390,7 @@ class Parser {
             return InvalidExpr.instance;
         }
 
-        return FunctionCallExpr(name, args,
+        return CallExpr(name, args,
           (start: start, length: prev.end - start));
 
       case TokenType.lParen:

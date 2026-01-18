@@ -1,4 +1,4 @@
-import '../error/reporter.dart';
+import '../eval/evaluator.dart';
 import '../parser/ast.dart';
 import 'values.dart';
 
@@ -14,7 +14,6 @@ void registerFunction(String name, BuiltinFunction fn) {
 
 class EvalContext {
   final Program program;
-  final ErrorReporter reporter;
 
   final EvalMap values = {};
   final Map<String, RuntimeFunction> functions = {};
@@ -22,7 +21,7 @@ class EvalContext {
 
   late final Map<String, Declaration> declMap;
 
-  EvalContext(this.program, {required this.reporter}) {
+  EvalContext(this.program) {
     declMap = {
       for (final d in program.declarations) d.name: d
     };
@@ -44,9 +43,7 @@ class EvalContext {
       return InvalidValue.instance;
     }
 
-    RuntimeState.pushPosition(decl.expr.position);
-    final value = decl.expr.eval(this);
-    RuntimeState.popPosition();
+    final value = Evaluator.evaluate(decl.expr, this);
 
     stack.remove(name);
     values[name] = value;
