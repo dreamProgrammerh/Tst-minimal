@@ -3,12 +3,7 @@ import 'context.dart';
 import 'values.dart';
 
 void initBuiltin() {
-  registerFunction('rgba', (args) {
-    if (args.length != 4) {
-      RuntimeState.error('rgba expects 4 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('rgba', 4, (args) {
     int r = args[0].asInt() & 0xff;
     int g = args[1].asInt() & 0xff;
     int b = args[2].asInt() & 0xff;
@@ -17,12 +12,7 @@ void initBuiltin() {
     return IntValue((a << 24) | (r << 16) | (g << 8) | b);
   });
   
-  registerFunction('rgbo', (args) {
-    if (args.length != 4) {
-      RuntimeState.error('rgbo expects 4 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('rgbo', 4, (args) {
     int r = args[0].asInt() & 0xff;
     int g = args[1].asInt() & 0xff;
     int b = args[2].asInt() & 0xff;
@@ -31,12 +21,7 @@ void initBuiltin() {
     return IntValue((a << 24) | (r << 16) | (g << 8) | b);
   });
 
-  registerFunction('rgb', (args) {
-    if (args.length != 3) {
-      RuntimeState.error('rgb expects 3 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('rgb', 3, (args) {
     int r = args[0].asInt() & 0xff;
     int g = args[1].asInt() & 0xff;
     int b = args[2].asInt() & 0xff;
@@ -44,23 +29,13 @@ void initBuiltin() {
     return IntValue((0xff << 24) | (r << 16) | (g << 8) | b);
   });
 
-  registerFunction('hex', (args) {
-    if (args.length != 1) {
-      RuntimeState.error('hex expects 1 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('hex', 1, (args) {
     int code = args[0].asInt();
 
     return IntValue(Colors.hex(code));
   });
   
-  registerFunction('hslo', (args) {
-    if (args.length != 4) {
-      RuntimeState.error('hslo expects 4 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('hslo', 4, (args) {
     double h = args[0].asFloat();
     double s = args[1].asFloat();
     double l = args[2].asFloat();
@@ -69,12 +44,7 @@ void initBuiltin() {
     return IntValue(Colors.hsl(h, s, l, o));
   });
   
-  registerFunction('hsl', (args) {
-    if (args.length != 3) {
-      RuntimeState.error('hsl expects 3 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('hsl', 3, (args) {
     double h = args[0].asFloat();
     double s = args[1].asFloat();
     double l = args[2].asFloat();
@@ -82,12 +52,7 @@ void initBuiltin() {
     return IntValue(Colors.hsl(h, s, l));
   });
   
-  registerFunction('hsvo', (args) {
-    if (args.length != 4) {
-      RuntimeState.error('hsvo expects 4 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('hsvo', 4, (args) {
     double h = args[0].asFloat();
     double s = args[1].asFloat();
     double v = args[2].asFloat();
@@ -96,12 +61,7 @@ void initBuiltin() {
     return IntValue(Colors.hsv(h, s, v, o));
   });
   
-  registerFunction('hsv', (args) {
-    if (args.length != 3) {
-      RuntimeState.error('hsv expects 3 arguments');
-      return InvalidValue.instance;
-    }
-
+  registerFuncWithArgs('hsv', 3, (args) {
     double h = args[0].asFloat();
     double s = args[1].asFloat();
     double v = args[2].asFloat();

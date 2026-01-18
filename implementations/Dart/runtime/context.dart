@@ -12,6 +12,23 @@ void registerFunction(String name, BuiltinFunction fn) {
   _builtinFunctions[name] = fn;
 }
 
+void registerFuncWithArgs(String name, int argsCount, BuiltinFunction fn) {
+  BuiltinFunction func = (args) {
+    if (args.length != argsCount) {
+      RuntimeState.error('$name ${
+        args.length > 0
+          ? "expects $argsCount arguments"
+          : "doesn't expects any argument"
+      }');
+      return InvalidValue.instance;
+    }
+    
+    return fn(args);
+  };
+  
+  _builtinFunctions[name] = func;
+}
+
 class EvalContext {
   final Program program;
 
