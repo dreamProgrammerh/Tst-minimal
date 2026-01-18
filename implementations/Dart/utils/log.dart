@@ -6,18 +6,18 @@ class _TableRow {
   String color;
   String name;
   String value;
-  String rep;
+  String code;
   
   _TableRow({
     this.color  = '',
     this.name   = '',
     this.value  = '',
-    this.rep    = '',
+    this.code    = '',
   });
   
   @override
   String toString() {
-    return '($color, $name, $value, $rep)';
+    return '($color, $name, $value, $code)';
   }
 }
 
@@ -38,20 +38,20 @@ void printEvalMap(EvalMap map) {
     tableColor = "\x1B[32m",
     nameColor = "\x1B[34m",
     valueColor = "\x1B[33m",
-    representationColor = "\x1B[36m",
+    codeColor = "\x1B[36m",
     
     sideSpace = ' ' * (spaceAround ~/ 2),
     colorTitle = "Color",
     nameTitle = "Name",
     valueTitle = "Value",
-    representationTitle = "Representation";
+    codeTitle = "Code";
 
   // columns length
   int
     maxColorLength = _max(colorBlock, colorTitle.length),
     maxNameLength = _max(10, nameTitle.length),
     maxValueLength = _max(12, valueTitle.length),
-    maxRepresentationLength = _max(14, representationTitle.length);
+    maxCodeLength = _max(10, codeTitle.length);
 
   
   // organize the table
@@ -60,7 +60,7 @@ void printEvalMap(EvalMap map) {
       color: '',
       name: '',
       value: '',
-      rep: ''
+      code: ''
     ), growable: false);
   
   // fill table with data
@@ -69,6 +69,7 @@ void printEvalMap(EvalMap map) {
     _TableRow row = table[i++];
     // name column
     row.name = entry.key;
+    maxNameLength = _max(maxNameLength, row.name.length);
     
     // value column
     row.value = entry.value is IntValue
@@ -76,6 +77,9 @@ void printEvalMap(EvalMap map) {
       : entry.value is FloatValue
         ? (entry.value as FloatValue).value.toString()
         : "invalid";
+    
+    maxValueLength = _max(maxValueLength, row.value.length);
+        
     
     // color column
     if (entry.value is IntValue) {
@@ -86,12 +90,13 @@ void printEvalMap(EvalMap map) {
     }
     
     // color column
-    row.rep = entry.value is IntValue
-      ? '#${(entry.value as IntValue).value.toRadixString(16).padRight(8, '0').toUpperCase()}'
+    row.code = entry.value is IntValue
+      ? '#${(entry.value as IntValue).value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
       : entry.value is FloatValue
         ? '${(entry.value as FloatValue).value.toStringAsExponential()}f'
         : '';
-  
+    
+    maxCodeLength = _max(maxCodeLength, row.code.length);
   }
   i = 0;
 
@@ -104,7 +109,7 @@ void printEvalMap(EvalMap map) {
   }$sideSpace|$sideSpace${
     valueTitle.padRight(maxValueLength)
   }$sideSpace|$sideSpace${
-    representationTitle.padRight(maxRepresentationLength)
+    codeTitle.padRight(maxCodeLength)
   }$sideSpace|$reset\n");
   
   sb.write("$tableColor|${
@@ -114,7 +119,7 @@ void printEvalMap(EvalMap map) {
   }|${
     '-' * (maxValueLength + spaceAround)
   }|${
-    '-' * (maxRepresentationLength + spaceAround)
+    '-' * (maxCodeLength + spaceAround)
   }|$reset\n");
 
   
@@ -126,8 +131,8 @@ void printEvalMap(EvalMap map) {
       row.name.padRight(maxNameLength)
     }$sideSpace$tableColor|$reset$sideSpace$valueColor${
       row.value.padRight(maxValueLength)
-    }$sideSpace$tableColor|$reset$sideSpace$representationColor${
-      row.rep.padRight(maxRepresentationLength)
+    }$sideSpace$tableColor|$reset$sideSpace$codeColor${
+      row.code.padRight(maxCodeLength)
     }$sideSpace$tableColor|$reset\n");
   }
 
