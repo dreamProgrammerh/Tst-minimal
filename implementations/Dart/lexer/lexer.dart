@@ -1,7 +1,7 @@
 import '../constants/const-lexer.dart' as LEXER;
 import '../error/errors.dart';
 import '../error/reporter.dart';
-import '../runtime/colors.dart' as Colors show hexColor;
+import '../utils/colors.dart' as Colors show hexColor;
 import 'source.dart';
 
 enum TokenType {
