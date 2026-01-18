@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'utils/log.dart' as Log;
 import 'error/errors.dart';
 import 'error/reporter.dart';
 import 'eval/evaluator.dart';
@@ -58,7 +59,5 @@ void main() async {
     return;
   }
   
-  for (final en in evalMap.entries) {
-    print('${en.key}: ${en.value}');
-  }
+  Log.printEvalMap(evalMap);
 }
