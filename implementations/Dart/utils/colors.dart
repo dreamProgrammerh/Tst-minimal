@@ -365,6 +365,6 @@ double lerpDouble(double a, double b, double t) {
   return a * (1.0 - t) + b * t;
 }
 
-double lerpInt(int a, int b, double t) {
-  return a + (b - a) * t;
+int lerpInt(int a, int b, double t) {
+  return (a + (b - a) * t).round();
 }
