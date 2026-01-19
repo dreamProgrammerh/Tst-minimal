@@ -374,9 +374,10 @@ class Parser {
       case TokenType.identifier:
         final name = cur.lexeme;
 
-        if (_expect(TokenType.lParen,
-          "Unexpected identifier without function call: $name"))
-          return InvalidExpr.instance;
+        if (!_match(TokenType.lParen)) {
+          return LiteralExpr(name,
+            (start: start, length: prev.end - start));
+        }
 
         final args = <Expr>[];
         if (!_match(TokenType.rParen)) {

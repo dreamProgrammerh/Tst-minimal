@@ -2,11 +2,17 @@ import '../eval/evaluator.dart';
 import '../parser/ast.dart';
 import 'values.dart';
 
+typedef BuiltinLiteral  = RuntimeValue;
 typedef BuiltinFunction = RuntimeValue Function(List<RuntimeValue> args);
 typedef RuntimeFunction = RuntimeValue Function(List<RuntimeValue> args);
 typedef EvalMap = Map<String, RuntimeValue>;
  
+final Map<String, BuiltinLiteral> _builtinLiterals = {};
 final Map<String, BuiltinFunction> _builtinFunctions = {};
+
+void registerLiteral(String name, BuiltinLiteral lit) {
+  _builtinLiterals[name] = lit;
+}
 
 void registerFunction(String name, BuiltinFunction fn) {
   _builtinFunctions[name] = fn;
@@ -44,6 +50,7 @@ class EvalContext {
     };
   }
   
+  BuiltinLiteral? getLiteral(String name)   => _builtinLiterals[name];
   RuntimeFunction? getFunction(String name) => _builtinFunctions[name] ?? functions[name];
 
   RuntimeValue resolve(String name) {

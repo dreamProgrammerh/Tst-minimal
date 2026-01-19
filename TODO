@@ -1,7 +1,1 @@
 # TODO: Add your notes here
-
-# Colors literals
-
-add naitve colors literals like red, blue, yellow etc.
-they not accsesd with $ident this used to accses other attrbuites
-like we have ident() for function if ident without () it will be literal

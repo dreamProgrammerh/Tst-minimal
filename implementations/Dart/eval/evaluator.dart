@@ -50,6 +50,10 @@ class Evaluator {
         res = ctx.resolve(varExpr.name);
         break;
         
+      case LiteralExpr literalExpr:
+        res = _evalLiteral(literalExpr, ctx);
+        break;
+        
       case CallExpr callExpr:
         res = _evalCall(callExpr, ctx);
         break;
@@ -113,6 +117,19 @@ int _rotr(int v, int n) {
 }
 
 // Eval Functions
+RuntimeValue _evalLiteral(LiteralExpr e, EvalContext ctx) {
+  RuntimeValue res;
+  
+  final lit = ctx.getLiteral(e.literal);
+  if (lit == null) {
+    RuntimeState.error('Unknown literal: ${e.literal}');
+    res = InvalidValue.instance;
+  } else {
+    res = lit;
+  }
+
+  return res;
+}
 RuntimeValue _evalCall(CallExpr e, EvalContext ctx) {
   RuntimeValue res;
   

@@ -35,6 +35,11 @@ class IntExpr extends Expr {
   const IntExpr(this.value, super.position);
 }
 
+class LiteralExpr extends Expr {
+  final String literal;
+  const LiteralExpr(this.literal, super.position);
+}
+
 class FloatExpr extends Expr {
   final double value;
   const FloatExpr(this.value, super.position);
