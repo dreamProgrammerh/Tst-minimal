@@ -59,5 +59,5 @@ void main() async {
     return;
   }
   
-  Log.printEvalMap(evalMap);
+  Log.printEval(evalMap.entries);
 }

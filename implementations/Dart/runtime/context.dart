@@ -5,6 +5,7 @@ import 'values.dart';
 typedef BuiltinLiteral  = RuntimeValue;
 typedef BuiltinFunction = RuntimeValue Function(List<RuntimeValue> args);
 typedef RuntimeFunction = RuntimeValue Function(List<RuntimeValue> args);
+typedef EvalList = List<(String, RuntimeValue)>;
 typedef EvalMap = Map<String, RuntimeValue>;
  
 final Map<String, BuiltinLiteral> _builtinLiterals = {};

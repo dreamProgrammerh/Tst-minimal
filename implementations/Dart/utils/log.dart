@@ -26,7 +26,7 @@ int _max(int a, int b) {
   return a > b ? a : b;
 }
 
-void printEvalMap(EvalMap map) {
+void printEval<T extends Iterable>(T map) {
   StringBuffer sb = StringBuffer();
   
   // varibles
@@ -66,7 +66,7 @@ void printEvalMap(EvalMap map) {
   
   // fill table with data
   int i = 0;
-  for (final entry in map.entries) {
+  for (final entry in map) {
     _TableRow row = table[i++];
     // name column
     row.name = entry.key;
@@ -142,10 +142,13 @@ void printEvalMap(EvalMap map) {
 }
 
 void printColorLiterals() {
-  final EvalMap map = {};
+  final EvalList map = List.generate(LITERALS.colorLiterals.length,
+    (i) {
+      final lit = LITERALS.colorLiterals[i];
+      return (lit.$1, IntValue(lit.$2));
+    },
+    growable:  false
+  );
   
-  for (final lit in LITERALS.colorLiterals)
-    map[lit.$1] = IntValue(lit.$2);
-  
-  printEvalMap(map);
+  printEval(map);
 }
