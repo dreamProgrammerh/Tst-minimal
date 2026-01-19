@@ -26,6 +26,10 @@ int _max(int a, int b) {
   return a > b ? a : b;
 }
 
+double _round(double a, int b) {
+  return double.parse(a.toStringAsFixed(b));
+}
+
 void printEval<T extends Iterable>(T map) {
   StringBuffer sb = StringBuffer();
   
@@ -41,7 +45,8 @@ void printEval<T extends Iterable>(T map) {
     valueColor = "\x1B[33m",
     codeColor = "\x1B[36m",
     
-    sideSpace = ' ' * (spaceAround ~/ 2),
+    sideSpace = ' ' * (spaceAround ~/ 2), 
+    invalidValue = "Invalid",
     colorTitle = "Color",
     nameTitle = "Name",
     valueTitle = "Value",
@@ -76,7 +81,7 @@ void printEval<T extends Iterable>(T map) {
     row.value = entry.value is IntValue
       ? (entry.value as IntValue).value.toString()
       : entry.value is FloatValue
-        ? (entry.value as FloatValue).value.toString()
+        ? _round((entry.value as FloatValue).value, 6).toString()
         : "invalid";
     
     maxValueLength = _max(maxValueLength, row.value.length);
@@ -94,8 +99,9 @@ void printEval<T extends Iterable>(T map) {
     row.code = entry.value is IntValue
       ? '#${(entry.value as IntValue).value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
       : entry.value is FloatValue
-        ? '${(entry.value as FloatValue).value.toStringAsExponential()}f'
-        : '';
+        ? '${(entry.value as FloatValue).value.toStringAsExponential(4)}'
+        : invalidValue.padLeft( // padCenter
+          (maxCodeLength - invalidValue.length) ~/ 2 + invalidValue.length);
     
     maxCodeLength = _max(maxCodeLength, row.code.length);
   }
