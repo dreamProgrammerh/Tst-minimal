@@ -3,6 +3,24 @@ import 'context.dart';
 import 'values.dart';
 
 void initBuiltin() {
+  _initLiterals();
+  _initFunctions();
+}
+
+void _initLiterals() {
+  // Special
+  registerLiteral('invalid', InvalidValue.instance);
+  
+  // Math
+  registerLiteral('PI', FloatValue(3.1415926535897932));
+  
+  // Colors
+  registerLiteral('red', IntValue(0xFFFF0000));
+  registerLiteral('green', IntValue(0xFF00FF00));
+  registerLiteral('blue', IntValue(0xFF0000FF));
+}
+
+void _initFunctions() {
   // Color Variants
   registerFuncWithArgs('rgba', 4, (args) {
     int r = args[0].asInt() & 0xff;
