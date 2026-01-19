@@ -1,1 +1,25 @@
 # TODO: Add your notes here
+
+# new Operator (remainder %%)
+
+**Remainder %%** work like **Module %** yet with one *unit different*,
+the deference between them is how they choose the sign,
+**module** always has the same sign as the **divisor**,
+while **remainder** has same sign as **dividend**.
+
+Examples:
+
+```tstm
+ 7 %% 10  =  7
+ 7 % 10   =  7
+ 10 %% 10 =  0
+ 10 % 10  =  0
+ 12 %% 10 =  2
+ 12 % 10  =  2
+-15 %% 10 = -5
+-15 % 10  =  5
+ 8 %% -10 =  8
+ 8 % -10  =  8
+-9 %% -10 = -9
+-9 % -10  =  1
+```
