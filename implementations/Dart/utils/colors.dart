@@ -253,6 +253,10 @@ ARGBColor adjustContrast(ARGBColor color, double factor) {
   return rgba(f(getR(color)), f(getG(color)), f(getB(color)), a);
 }
 
+ARGBColor adjustHue(ARGBColor color, double hueDegrees) { // uncompleted
+  return color;
+}
+
 ARGBColor adjustSaturation(ARGBColor color, double factor) {
   final a = getA(color);
   final r = getR(color).toDouble();
