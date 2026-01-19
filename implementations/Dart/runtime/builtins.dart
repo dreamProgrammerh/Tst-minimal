@@ -1,3 +1,4 @@
+import '../constants/const-literals.dart' as LITERALS;
 import '../utils/colors.dart' as Colors;
 import 'context.dart';
 import 'values.dart';
@@ -8,16 +9,17 @@ void initBuiltin() {
 }
 
 void _initLiterals() {
-  // Special
-  registerLiteral('invalid', InvalidValue.instance);
+   // Special
+  for (final lit in LITERALS.specialLiterals)
+    registerLiteral(lit.$1, lit.$2);
   
   // Math
-  registerLiteral('PI', FloatValue(3.1415926535897932));
+  for (final lit in LITERALS.mathLiterals)
+    registerLiteral(lit.$1, lit.$2);
   
   // Colors
-  registerLiteral('red', IntValue(0xFFFF0000));
-  registerLiteral('green', IntValue(0xFF00FF00));
-  registerLiteral('blue', IntValue(0xFF0000FF));
+  for (final lit in LITERALS.colorLiterals)
+    registerLiteral(lit.$1, IntValue(lit.$2));
 }
 
 void _initFunctions() {
