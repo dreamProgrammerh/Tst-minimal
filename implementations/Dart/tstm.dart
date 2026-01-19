@@ -14,7 +14,7 @@ void main() async {
   
   final out = StringBuffer();
   final reporter = ErrorReporter(
-    colord: true,
+    colored: true,
     breakOnPush: false,
     printImmediately: true,
     printer: (s) => out.writeln(s),
