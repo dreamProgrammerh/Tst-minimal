@@ -1,5 +1,5 @@
 import '../constants/const-literals.dart' as LITERALS;
-import '../runtime/context.dart';
+import '../runtime/results.dart';
 import '../runtime/values.dart';
 import 'colors.dart';
 
@@ -30,10 +30,10 @@ double _round(double a, int b) {
   return double.parse(a.toStringAsFixed(b));
 }
 
-void printEval<T extends Iterable>(T map) {
+void printEval<T extends EvalResult>(T result) {
   StringBuffer sb = StringBuffer();
   
-  // varibles
+  // variables
   final int
     colorBlock = 2,
     spaceAround = 2;
@@ -61,7 +61,7 @@ void printEval<T extends Iterable>(T map) {
 
   
   // organize the table
-  List<_TableRow> table = List.generate(map.length,
+  List<_TableRow> table = List.generate(result.length,
     (_) => new _TableRow(
       color: '',
       name: '',
@@ -71,7 +71,10 @@ void printEval<T extends Iterable>(T map) {
   
   // fill table with data
   int i = 0;
-  for (final entry in map) {
+  while (result.next()) {
+    final entry = result.current;
+    if (entry == null) break;
+    
     _TableRow row = table[i++];
     // name column
     row.name = entry.key;
@@ -148,13 +151,14 @@ void printEval<T extends Iterable>(T map) {
 }
 
 void printColorLiterals() {
-  final EvalList map = List.generate(LITERALS.colorLiterals.length,
-    (i) {
-      final lit = LITERALS.colorLiterals[i];
-      return (lit.$1, IntValue(lit.$2));
-    },
-    growable:  false
-  );
+  final EvalList list = EvalList(
+    List.generate(LITERALS.colorLiterals.length,
+      (i) {
+        final lit = LITERALS.colorLiterals[i];
+        return EvalEntry(key: lit.$1, value: IntValue(lit.$2));
+      },
+      growable:  false
+  ));
   
-  printEval(map);
+  printEval(list);
 }

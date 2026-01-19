@@ -6,6 +6,7 @@ import '../lexer/lexer.dart';
 import '../lexer/source.dart';
 import '../parser/ast.dart';
 import '../runtime/context.dart';
+import '../runtime/results.dart';
 import '../runtime/values.dart';
 
 class Evaluator {
@@ -19,7 +20,7 @@ class Evaluator {
     RuntimeState.setup(source, reporter);
     final ctx = EvalContext(program);
     
-    EvalMap map = {};
+    EvalMap map = EvalMap({});
     
     for (final decl in program.declarations) {
       final value = evaluate(decl.expr, ctx);

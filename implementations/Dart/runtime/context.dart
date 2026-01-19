@@ -1,12 +1,11 @@
 import '../eval/evaluator.dart';
 import '../parser/ast.dart';
+import 'results.dart';
 import 'values.dart';
 
 typedef BuiltinLiteral  = RuntimeValue;
 typedef BuiltinFunction = RuntimeValue Function(List<RuntimeValue> args);
 typedef RuntimeFunction = RuntimeValue Function(List<RuntimeValue> args);
-typedef EvalList = List<(String, RuntimeValue)>;
-typedef EvalMap = Map<String, RuntimeValue>;
  
 final Map<String, BuiltinLiteral> _builtinLiterals = {};
 final Map<String, BuiltinFunction> _builtinFunctions = {};
@@ -39,7 +38,7 @@ void registerFuncWithArgs(String name, int argsCount, BuiltinFunction fn) {
 class EvalContext {
   final Program program;
 
-  final EvalMap values = {};
+  final EvalMap values = EvalMap({});
   final Map<String, RuntimeFunction> functions = {};
   final Set<String> stack = {};
 
@@ -55,7 +54,7 @@ class EvalContext {
   RuntimeFunction? getFunction(String name) => _builtinFunctions[name] ?? functions[name];
 
   RuntimeValue resolve(String name) {
-    if (values.containsKey(name)) return values[name]!;
+    if (values.map.containsKey(name)) return values[name]!;
 
     final decl = declMap[name];
     if (decl == null) {
