@@ -1,3 +1,4 @@
+import '../constants/const-literals.dart' as LITERALS;
 import '../runtime/context.dart';
 import '../runtime/values.dart';
 import 'colors.dart';
@@ -138,4 +139,13 @@ void printEvalMap(EvalMap map) {
 
   // print table
   print(sb.toString());
+}
+
+void printColorLiterals() {
+  final EvalMap map = {};
+  
+  for (final lit in LITERALS.colorLiterals)
+    map[lit.$1] = IntValue(lit.$2);
+  
+  printEvalMap(map);
 }
