@@ -23,3 +23,16 @@ Examples:
 -9 %% -10 = -9
 -9 % -10  =  1
 ```
+
+# new Feature (units `t)
+
+**Units `u** are lexer function that take **x** a number and return result number.
+
+Examples:
+
+```tstm
+15`deg      // this convert 15 degrees to radian
+6.28`rad    // this convert 6.28 radian to something near 360 degrees
+50`%        // this convert 50 to 0.5 float percentage
+50`%%       // this convert 50 to 0.05 float percentage
+```
