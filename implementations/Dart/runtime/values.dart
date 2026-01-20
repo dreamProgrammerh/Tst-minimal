@@ -36,6 +36,7 @@ abstract class RuntimeValue {
   float32 asFloat();
   const RuntimeValue();
   
+  String stringify() => '';
   @override
   String toString();
 }
@@ -47,15 +48,18 @@ class InvalidValue extends RuntimeValue {
 
   @override
   float32 asFloat() {
-    RuntimeState.error('Invalid cannot be float32');
+    RuntimeState.error('Invalid cannot be float');
     return 0.0;
   }
 
   @override
   int32 asInt() {
-    RuntimeState.error('Invalid cannot be float32');
+    RuntimeState.error('Invalid cannot be float');
     return 0;
   }
+  
+  @override
+  String stringify() => 'invalid';
   
   @override
   String toString() => '(invalid)';
@@ -71,7 +75,10 @@ class IntValue extends RuntimeValue {
   float32 asFloat() => value.toDouble();
 
   @override
-  String toString() => '$value (int32)';
+  String stringify() => '$value';
+  
+  @override
+  String toString() => '$value (int)';
 }
 
 class FloatValue extends RuntimeValue {
@@ -80,12 +87,15 @@ class FloatValue extends RuntimeValue {
 
   @override
   int32 asInt() {
-    RuntimeState.error('Cannot convert float32 to int32 implicitly');
+    RuntimeState.error('Cannot convert float to int implicitly');
     return 0;
   }
   @override
   float32 asFloat() => value;
 
   @override
-  String toString() => '$value (float32)';
+  String stringify() => '$value';
+  
+  @override
+  String toString() => '$value (float)';
 }
