@@ -2,6 +2,7 @@ import '../error/errors.dart';
 import '../error/reporter.dart';
 import '../lexer/lexer.dart';
 import '../lexer/source.dart';
+import '../runtime/values.dart';
 import 'ast.dart';
 
 class Parser {
@@ -22,6 +23,8 @@ class Parser {
 
   bool get isAtEnd => current.type == TokenType.eof;
 
+  Position _p(int start) => (start: start, length: prev.end - start); 
+  
   Program parse() {
     List<Declaration> declarations = [];
 
@@ -38,7 +41,7 @@ class Parser {
   }
 
   Declaration? parseDecl() {
-    int start = current.start;
+    final start = current.start;
 
     String? name = null; 
     if (_is(TokenType.identifier))
@@ -53,8 +56,7 @@ class Parser {
     if (expr == InvalidExpr.instance)
       return null;
 
-    return Declaration(name, expr,
-      (start: start, length: prev.end - start));
+    return Declaration(name, expr, _p(start));
   }
 
   // Expression hierarchy
@@ -71,19 +73,19 @@ class Parser {
    * term (*, /, %, /%)
    * power (**)
    * unary (not !, negatives -, positive +, flip not ~)
-   * primary (int, float, variable, call, parenthesized)
+   * primary (int, float, variable, literal, call, parenthesized)
    */
 
 
   Expr _expression() {
-    var expr = _ternary();
+    final expr = _ternary();
     ignoreSemicolons();
     return expr;
   }
 
   Expr _ternary() {
-    int start = current.start;
-    var condition = _merge();
+    final start = current.start;
+    final condition = _merge();
 
     if (_match(TokenType.question)) {
       final thenExpr = _ternary();
@@ -93,15 +95,14 @@ class Parser {
         return InvalidExpr.instance;
 
       final elseExpr = _ternary();
-      return TernaryExpr(condition, thenExpr, elseExpr,
-        (start: start, length: prev.end - start));
+      return TernaryExpr(condition, thenExpr, elseExpr, _p(start));
     }
 
     return condition;
   }
 
   Expr _merge() {
-    int start = current.start;
+    final start = current.start;
     var expr = _or();
 
     loop:
@@ -111,8 +112,7 @@ class Parser {
         case TokenType.coalesce:
         case TokenType.guard:
           _advance();
-          expr = MergeExpr(expr, type, _or(),
-            (start: start, length: prev.end - start));
+          expr = MergeExpr(expr, type, _or(), _p(start));
           break;
 
         default:
@@ -124,38 +124,35 @@ class Parser {
   }
 
   Expr _or() {
-    int start = current.start;
+    final start = current.start;
     var expr = _xor();
     while (_match(TokenType.logicalOr))
-      expr = LogicalExpr(expr, TokenType.logicalOr, _xor(),
-        (start: start, length: prev.end - start));
+      expr = LogicalExpr(expr, TokenType.logicalOr, _xor(), _p(start));
 
     return expr;
   }
 
   Expr _xor() {
-    int start = current.start;
+    final start = current.start;
     var expr = _and();
     while (_match(TokenType.logicalXor))
-      expr = LogicalExpr(expr, TokenType.logicalXor, _and(),
-        (start: start, length: prev.end - start));
+      expr = LogicalExpr(expr, TokenType.logicalXor, _and(), _p(start));
 
     return expr;
   }
 
   Expr _and() {
-    int start = current.start;
+    final start = current.start;
     var expr = _equality();
     while (_match(TokenType.logicalAnd))
-      expr = LogicalExpr(expr, TokenType.logicalAnd, _equality(),
-        (start: start, length: prev.end - start));
+      expr = LogicalExpr(expr, TokenType.logicalAnd, _equality(), _p(start));
 
     return expr;
   }
 
 
   Expr _equality() {
-    int start = current.start;
+    final start = current.start;
     var expr = _comparison();
 
     loop:
@@ -169,8 +166,7 @@ class Parser {
         case TokenType.strictEqual:
         case TokenType.strictNotEqual:
           _advance();
-          expr = CompareExpr(expr, type, _comparison(),
-            (start: start, length: prev.end - start));
+          expr = CompareExpr(expr, type, _comparison(), _p(start));
           break;
 
         default:
@@ -182,7 +178,7 @@ class Parser {
   }
 
   Expr _comparison() {
-    int start = current.start;
+    final start = current.start;
     var expr = _bitOr();
 
     loop:
@@ -194,8 +190,7 @@ class Parser {
         case TokenType.lessEqual:
         case TokenType.greaterEqual:
           _advance();
-          expr = CompareExpr(expr, type, _bitOr(),
-            (start: start, length: prev.end - start));
+          expr = CompareExpr(expr, type, _bitOr(), _p(start));
           break;
 
         default:
@@ -207,37 +202,34 @@ class Parser {
   }
 
   Expr _bitOr() {
-    int start = current.start;
+    final start = current.start;
     var expr = _bitXor();
     while (_match(TokenType.bitOr))
-      expr = BinaryExpr(expr, TokenType.bitOr, _bitXor(),
-        (start: start, length: prev.end - start));
+      expr = BinaryExpr(expr, TokenType.bitOr, _bitXor(), _p(start));
 
     return expr;
   }
 
   Expr _bitXor() {
-    int start = current.start;
+    final start = current.start;
     var expr = _bitAnd();
     while (_match(TokenType.bitXor))
-      expr = BinaryExpr(expr, TokenType.bitXor, _bitAnd(),
-        (start: start, length: prev.end - start));
+      expr = BinaryExpr(expr, TokenType.bitXor, _bitAnd(), _p(start));
 
     return expr;
   }
 
   Expr _bitAnd() {
-    int start = current.start;
+    final start = current.start;
     var expr = _shift();
     while (_match(TokenType.bitAnd))
-      expr = BinaryExpr(expr, TokenType.bitAnd, _shift(),
-        (start: start, length: prev.end - start));
+      expr = BinaryExpr(expr, TokenType.bitAnd, _shift(), _p(start));
 
     return expr;
   }
 
   Expr _shift() {
-    int start = current.start;
+    final start = current.start;
     var expr = _additive();
 
     loop:
@@ -249,8 +241,7 @@ class Parser {
         case TokenType.rotLeft:
         case TokenType.rotRight:
           _advance();
-          expr = BinaryExpr(expr, type, _additive(),
-            (start: start, length: prev.end - start));
+          expr = BinaryExpr(expr, type, _additive(), _p(start));
           break;
 
         default:
@@ -262,7 +253,7 @@ class Parser {
   }
 
   Expr _additive() {
-    int start = current.start;
+    final start = current.start;
     var expr = _term();
 
     loop:
@@ -272,8 +263,7 @@ class Parser {
         case TokenType.plus:
         case TokenType.minus:
           _advance();
-          expr = BinaryExpr(expr, type, _term(),
-            (start: start, length: prev.end - start));
+          expr = BinaryExpr(expr, type, _term(), _p(start));
           break;
 
         default:
@@ -285,7 +275,7 @@ class Parser {
   }
 
   Expr _term() {
-    int start = current.start;
+    final start = current.start;
     var expr = _power();
 
     loop:
@@ -297,8 +287,7 @@ class Parser {
         case TokenType.percent:
         case TokenType.intDiv:
           _advance();
-          expr = BinaryExpr(expr, type, _power(),
-            (start: start, length: prev.end - start));
+          expr = BinaryExpr(expr, type, _power(), _p(start));
           break;
 
         default:
@@ -310,30 +299,27 @@ class Parser {
   }
 
   Expr _power() {
-    int start = current.start;
+    final start = current.start;
     var expr = _unary();
     if (_match(TokenType.power))
-      expr = BinaryExpr(expr, TokenType.power, _power(),
-        (start: start, length: prev.end - start));
+      expr = BinaryExpr(expr, TokenType.power, _power(), _p(start));
 
     return expr;
   }
 
   Expr _unary() {
-    int start = current.start;
+    final start = current.start;
     final type = current.type;
     switch (type) {
       case TokenType.not:
         _advance();
-        return NotExpr(_unary(),
-          (start: start, length: prev.end - start));
+        return NotExpr(_unary(), _p(start));
 
       case TokenType.minus:
       case TokenType.plus:
       case TokenType.bitNot:
         _advance();
-        return UnaryExpr(type, _unary(),
-          (start: start, length: prev.end - start));
+        return UnaryExpr(type, _unary(), _p(start));
 
       default:
         return _primary();
@@ -341,7 +327,7 @@ class Parser {
   }
 
   Expr _primary() {
-    int start = current.start;
+    final start = current.start;
     final cur = _advance();
 
     switch (cur.type) {
@@ -352,15 +338,13 @@ class Parser {
       case TokenType.bin:
         int? value = cur.asInt();
         return value != null
-          ? IntExpr(value,
-            (start: start, length: prev.end - start))
+          ? IntExpr(value, _p(start))
           : InvalidExpr.instance;
 
       case TokenType.float32:
         double? value = cur.asFloat();
         return value != null
-          ? FloatExpr(value,
-            (start: start, length: prev.end - start))
+          ? FloatExpr(value, _p(start))
           : InvalidExpr.instance;
 
       case TokenType.dollar:
@@ -370,15 +354,13 @@ class Parser {
 
 
         final name = _peek(-1).lexeme;
-        return VarExpr(name,
-          (start: start, length: prev.end - start));
+        return VarExpr(name, _p(start));
 
       case TokenType.identifier:
         final name = cur.lexeme;
 
         if (!_match(TokenType.lParen)) {
-          return LiteralExpr(name,
-            (start: start, length: prev.end - start));
+          return LiteralExpr(name, _p(start));
         }
 
         final args = <Expr>[];
@@ -393,8 +375,7 @@ class Parser {
             return InvalidExpr.instance;
         }
 
-        return CallExpr(name, args,
-          (start: start, length: prev.end - start));
+        return CallExpr(name, args, _p(start));
 
       case TokenType.lParen:
         final expr = _expression();
