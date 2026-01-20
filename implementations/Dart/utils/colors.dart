@@ -383,7 +383,9 @@ List<ARGBColor> shadeBetween(
 }
 
 String ansiColor(ARGBColor color, {int width = 1}) {
-  return '\x1B[48;2;${getR(color)};${getG(color)};${getB(color)}m${'  ' * width}\x1B[0m';
+  return color == 0
+    ? '\x1B[0m${'  ' * width}'
+    : '\x1B[48;2;${getR(color)};${getG(color)};${getB(color)}m${'  ' * width}\x1B[0m';
 }
 
 String ansiShade(List<ARGBColor> colors, {int width = 1}) {
