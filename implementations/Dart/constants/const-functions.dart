@@ -10,7 +10,131 @@ void randomSeed(int seed) {
   _rand = Math.Random(seed);
 }
 
+String _originValue(RuntimeValue v) =>
+  v is IntValue
+    ? '#${v.value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
+    : v is FloatValue
+      ? '${v.value.toStringAsExponential(4)}'
+      : v.stringify();
+
 final List<(String, BuiltinFunction)> builtinFunc = [
+  // Solid
+  ('print', (args) {
+    if (args.length == 0) {
+      RuntimeState.error('need at least arguments');
+      return InvalidValue.instance;
+    }
+    
+    if (args.length == 1) {
+      final v = args[0];
+      print(v.stringify());
+      
+      return v;
+    }
+    
+    StringBuffer sb = StringBuffer();
+    
+    for (int i = 0; i < args.length; i++) {
+      if (i != 0)
+        sb.write(', ');
+      
+      final v = args[i];
+      sb.write(v.stringify());
+    }
+    
+    print(sb.toString());
+    return args[0];
+  }),
+
+  ('printc', (args) {
+    if (args.length == 0) {
+      RuntimeState.error('need at least arguments');
+      return InvalidValue.instance;
+    }
+    
+    if (args.length == 1) {
+      final v = args[0];
+      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
+        
+      print(color);
+      return v;
+    }
+    
+    StringBuffer sb = StringBuffer();
+    
+    for (int i = 0; i < args.length; i++) {
+      if (i != 0)
+        sb.write(', ');
+      
+      final v = args[i];
+      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
+      
+      sb.write(color);
+    }
+    
+    print(sb.toString());
+    return args[0];
+  }),
+
+  ('printo', (args) {
+    if (args.length == 0) {
+      RuntimeState.error('need at least arguments');
+      return InvalidValue.instance;
+    }
+    
+    if (args.length == 1) {
+      final v = args[0];
+        
+      print(_originValue(v));
+      return v;
+    }
+    
+    StringBuffer sb = StringBuffer();
+    
+    for (int i = 0; i < args.length; i++) {
+      if (i != 0)
+        sb.write(', ');
+      
+      final v = args[i];
+      final color = _originValue(v);
+      
+      sb.write(color);
+    }
+    
+    print(sb.toString());
+    return args[0];
+  }),
+  
+  ('printco', (args) {
+    if (args.length == 0) {
+      RuntimeState.error('need at least arguments');
+      return InvalidValue.instance;
+    }
+    
+    if (args.length == 1) {
+      final v = args[0];
+      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
+        
+      print('$color ${_originValue(v)}');
+      return v;
+    }
+    
+    StringBuffer sb = StringBuffer();
+    
+    for (int i = 0; i < args.length; i++) {
+      if (i != 0)
+        sb.write(', ');
+      
+      final v = args[i];
+      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
+      
+      sb.write('$color ${_originValue(v)}');
+    }
+    
+    print(sb.toString());
+    return args[0];
+  }),
+
   // Math
   ('max', (args) {
     if (args.length < 2) {
@@ -135,6 +259,13 @@ final List<(String, int, BuiltinFunction)> builtinFuncArgCount = [
     return IntValue(x == 0 ? 0 : 1);
   }),
   
+  // Solid
+  ('seed', 1, (args) {
+    double x = args[0].asFloat();
+    randomSeed(x.toInt());
+    return args[0];
+  }),
+  
   // Math
   ('lerp', 3, (args) {
     bool intLerp = args[0] is IntValue && args[1] is IntValue;
@@ -162,12 +293,6 @@ final List<(String, int, BuiltinFunction)> builtinFuncArgCount = [
   ('sqrt', 1, (args) {
     double x = args[0].asFloat();
     return FloatValue(Math.sqrt(x));
-  }),
-  
-  ('seed', 1, (args) {
-    double x = args[0].asFloat();
-    randomSeed(x.toInt());
-    return args[0];
   }),
   
   ('round', 1, (args) {
