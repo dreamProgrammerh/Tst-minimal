@@ -2,8 +2,10 @@ import 'dart:io';
 
 class Source {
   final String src;
-  final String? name;
-  const Source(this.src, [this.name]);
+  final String? path;
+  String? get name => path == null ? null : _getFileName(path!);
+  
+  const Source(this.src, [this.path]);
 
   static Future<Source?> from(String path) async {
     final file = File(path);
