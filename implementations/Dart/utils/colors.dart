@@ -253,8 +253,48 @@ ARGBColor adjustContrast(ARGBColor color, double factor) {
   return rgba(f(getR(color)), f(getG(color)), f(getB(color)), a);
 }
 
-ARGBColor adjustHue(ARGBColor color, double hueDegrees) { // uncompleted
-  return color;
+ARGBColor adjustHue(ARGBColor color, double hueDegrees) { // TODO: use matrix multiplication instead
+  int a = getA(color);
+  double r = getR(color) / 255.0;
+  double g = getG(color) / 255.0;
+  double b = getB(color) / 255.0;
+
+  double maxVal = math.max(r, math.max(g, b));
+  double minVal = math.min(r, math.min(g, b));
+  double delta = maxVal - minVal;
+
+  double h = 0.0;
+  double s = 0.0;
+  double l = (maxVal + minVal) * 0.5;
+
+  if (delta != 0.0) {
+    s = (l < 0.5)
+      ? (delta / (maxVal + minVal))
+      : (delta / (2.0 - maxVal - minVal));
+  }
+
+  hueDegrees = hueDegrees % 360.0;
+  if (hueDegrees < 0.0) hueDegrees += 360.0;
+  h = hueDegrees;
+  
+  double c = (1 - (2 * l - 1).abs()) * s;
+  double x = c * (1 - ((h / 60) % 2 - 1).abs());
+  double m = l - c * 0.5;
+
+  r = g = b = 0;
+  if (h < 60)       { r = c; g = x; }
+  else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; }
+  else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; }
+  else /* 360 */    { r = c; b = x; }
+
+  return rgba(
+    ((r + m) * 255).round(),
+    ((g + m) * 255).round(),
+    ((b + m) * 255).round(),
+    a,
+  );
 }
 
 ARGBColor adjustSaturation(ARGBColor color, double factor) {
