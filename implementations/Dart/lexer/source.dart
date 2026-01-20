@@ -3,6 +3,8 @@ import 'dart:io';
 class Source {
   final String src;
   final String? path;
+  
+  int get length => src.length;
   String? get name => path == null ? null : _getFileName(path!);
   
   const Source(this.src, [this.path]);
@@ -23,12 +25,16 @@ class Source {
     return src.substring(start, end);
   }
 
-  int get length => src.length;
-
   String operator [](int index) {
     return src[index];
   }
 
   @override
   String toString() => src;
+}
+
+class MSource extends Source {
+  String src;
+  String? path;
+  MSource(this.src, [this.path]): super('', null);
 }
