@@ -46,7 +46,8 @@ class EvalContext {
 
   EvalContext(this.program) {
     declMap = {
-      for (final d in program.declarations) d.name: d
+      for (final d in program.declarations) 
+        if (d.name != null) d.name! : d
     };
   }
   

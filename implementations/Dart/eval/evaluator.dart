@@ -24,7 +24,8 @@ class Evaluator {
     
     for (final decl in program.declarations) {
       final value = evaluate(decl.expr, ctx);
-      map[decl.name] = value;
+      if (decl.name != null)
+        map[decl.name!] = value;
     }
     
     return map;

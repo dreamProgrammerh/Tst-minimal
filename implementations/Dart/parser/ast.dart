@@ -2,7 +2,7 @@ import '../lexer/lexer.dart';
 import '../runtime/values.dart';
 
 class Declaration {
-  final String name;
+  final String? name;
   final Expr expr;
   final Position position;
   

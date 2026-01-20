@@ -40,11 +40,9 @@ class Parser {
   Declaration? parseDecl() {
     int start = current.start;
 
-    if (_expect(TokenType.identifier,
-      "Expected identifier for declration"))
-      return null;
-
-    String name = _peek(-1).lexeme;
+    String? name = null; 
+    if (_is(TokenType.identifier))
+      name = _advance().lexeme;
 
     if (_expect(TokenType.colon,
       "Expected ':'"))
