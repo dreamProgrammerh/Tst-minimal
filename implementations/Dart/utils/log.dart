@@ -2,6 +2,7 @@ import '../constants/const-literals.dart' as LITERALS;
 import '../runtime/results.dart';
 import '../runtime/values.dart';
 import 'colors.dart';
+import 'colors.dart' as Colors;
 
 class _TableRow {
   String color;
@@ -29,6 +30,14 @@ int _max(int a, int b) {
 double _round(double a, int b) {
   return double.parse(a.toStringAsFixed(b));
 }
+
+String stringValue(RuntimeValue val) => val.stringify();
+String stringColor(RuntimeValue val) => Colors.ansiColor(val is IntValue ? val.value : 0);
+String stringCode(RuntimeValue val) => val is IntValue
+  ? '#${val.value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
+  : val is FloatValue
+    ? '${val.value.toStringAsExponential(4)}'
+    : val.stringify();
 
 void printEval<T extends EvalResult>(T result) {
   StringBuffer sb = StringBuffer();
