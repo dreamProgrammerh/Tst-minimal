@@ -3,7 +3,13 @@ import '../constants/const-functions.dart' as FUNCTIONS;
 import 'context.dart';
 import 'values.dart';
 
+bool _initialized = false; 
+bool get initialized => _initialized;
+
 void initBuiltin() {
+  if (_initialized) return;
+  _initialized = true;
+  
   _initLiterals();
   _initFunctions();
 }
