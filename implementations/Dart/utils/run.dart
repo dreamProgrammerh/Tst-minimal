@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../constants/const-functions.dart';
 import '../error/errors.dart';
 import '../error/reporter.dart';
 import '../eval/evaluator.dart';
@@ -64,10 +65,14 @@ class TstmRun {
     bool printProgram = false,
     bool printResult = false,
     bool useCatch = false,
-    bool reload = false}) {
+    bool reload = false,
+    int? seed}) {
     
     if (useCatch && reload)
       throw ArgumentError("You cannot reload while using catched program!");
+    
+    if (seed != null) 
+      randomSeed(seed);
     
     bool wait = false;
     
