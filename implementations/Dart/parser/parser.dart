@@ -77,7 +77,11 @@ class Parser {
    */
 
 
-  Expr _expression() => _ternary();
+  Expr _expression() {
+    var expr = _ternary();
+    ignoreSemicolons();
+    return expr;
+  }
 
   Expr _ternary() {
     int start = current.start;
@@ -407,6 +411,10 @@ class Parser {
         return InvalidExpr.instance;
     }
 
+  }
+  
+  void ignoreSemicolons() {
+    while (_is(TokenType.semicolon)) pos++;
   }
 
   bool _error(String msg, [int start = -1, int len = 1]) {

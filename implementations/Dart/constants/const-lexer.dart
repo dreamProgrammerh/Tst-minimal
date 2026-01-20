@@ -46,6 +46,7 @@ const Greater = '>';
 const Not = '!';
 const Question = '?';
 const Colon = ':';
+const Semicolon = ';';
 const Hash = '#';
 
 const Operators = [

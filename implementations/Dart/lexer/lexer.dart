@@ -11,7 +11,7 @@ enum TokenType {
   plus, minus, star, slash, percent, intDiv, power,
   bitAnd, bitOr, bitXor, bitNot,
   shiftLeft, shiftRight, rotLeft, rotRight,
-  question, colon,
+  question, colon, semicolon,
 
   not, equalEqual, notEqual,
   strictEqual, strictNotEqual, approxEqual, notApproxEqual,
@@ -88,6 +88,7 @@ final List<OperatorNode> _operatorMap = [
   (LEXER.RotateRight,     TokenType.rotRight),
   (LEXER.Question,        TokenType.question),
   (LEXER.Colon,           TokenType.colon),
+  (LEXER.Semicolon,       TokenType.semicolon),
   (LEXER.Not,             TokenType.not),
   (LEXER.EqualEqual,      TokenType.equalEqual),
   (LEXER.NotEqual,        TokenType.notEqual),
