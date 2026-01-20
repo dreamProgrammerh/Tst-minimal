@@ -1,21 +1,15 @@
 import 'dart:math' as Math;
 
+import '../utils/colors.dart' as Colors;
+import '../utils/log.dart' as Log;
 import '../runtime/context.dart';
 import '../runtime/values.dart';
-import '../utils/colors.dart' as Colors;
 
 Math.Random _rand = Math.Random();
 
 void randomSeed(int seed) {
   _rand = Math.Random(seed);
 }
-
-String _originValue(RuntimeValue v) =>
-  v is IntValue
-    ? '#${v.value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
-    : v is FloatValue
-      ? '${v.value.toStringAsExponential(4)}'
-      : v.stringify();
 
 final List<(String, BuiltinFunction)> builtinFunc = [
   // Solid
@@ -54,9 +48,8 @@ final List<(String, BuiltinFunction)> builtinFunc = [
     
     if (args.length == 1) {
       final v = args[0];
-      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
-        
-      print(color);
+      print(Log.stringColor(v));
+      
       return v;
     }
     
@@ -67,9 +60,7 @@ final List<(String, BuiltinFunction)> builtinFunc = [
         sb.write(', ');
       
       final v = args[i];
-      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
-      
-      sb.write(color);
+      sb.write(Log.stringColor(v));
     }
     
     print(sb.toString());
@@ -84,8 +75,8 @@ final List<(String, BuiltinFunction)> builtinFunc = [
     
     if (args.length == 1) {
       final v = args[0];
+      print(Log.stringCode(v));
         
-      print(_originValue(v));
       return v;
     }
     
@@ -96,9 +87,7 @@ final List<(String, BuiltinFunction)> builtinFunc = [
         sb.write(', ');
       
       final v = args[i];
-      final color = _originValue(v);
-      
-      sb.write(color);
+      sb.write(Log.stringCode(v));
     }
     
     print(sb.toString());
@@ -113,9 +102,8 @@ final List<(String, BuiltinFunction)> builtinFunc = [
     
     if (args.length == 1) {
       final v = args[0];
-      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
+      print('${Log.stringColor(v)} ${Log.stringCode(v)}');
         
-      print('$color ${_originValue(v)}');
       return v;
     }
     
@@ -126,9 +114,7 @@ final List<(String, BuiltinFunction)> builtinFunc = [
         sb.write(', ');
       
       final v = args[i];
-      final color = Colors.ansiColor(v is IntValue ? v.value : 0);
-      
-      sb.write('$color ${_originValue(v)}');
+      sb.write('${Log.stringColor(v)} ${Log.stringCode(v)}');
     }
     
     print(sb.toString());
