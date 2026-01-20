@@ -366,6 +366,7 @@ class Parser {
         final args = <Expr>[];
         if (!_match(TokenType.rParen)) {
           do {
+            if (_is(TokenType.rParen)) break;
             args.add(_expression());
 
           } while (_match(TokenType.comma));

@@ -142,20 +142,27 @@ class Lexer {
     while (!isAtEnd && LEXER.whitespaces.contains(current)) pos++;
   }
 
-  void _skipComments() {
-    // line comment
+  void _skipLineComment() {
     while (_match(LEXER.LineComment))
       while (!isAtEnd && !_match('\n')) pos++;
+  }
 
-    // block comment
+  void _skipBlockComment() {
     while (_match(LEXER.BlockCommentStart))
       while (!isAtEnd && !_match(LEXER.BlockCommentEnd)) pos++;
+  }
+  
+  void _skipComments() {
+    while (_is(LEXER.LineComment) || _is(LEXER.BlockCommentStart)) {
+      _skipLineComment();
+      _skipBlockComment();
+      _skipWhitespace();
+    }
   }
 
   Token? _nextToken() {
     _skipWhitespace();
     _skipComments();
-    _skipWhitespace();
 
     if (isAtEnd) return null;
     
