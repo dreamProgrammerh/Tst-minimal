@@ -9,27 +9,42 @@ class Parser {
   final ErrorReporter reporter;
   final List<Token> tokens;
   final Source? source;
-  int pos = 0;
+  int _pos = 0;
 
   Parser(this.tokens, {required this.reporter, this.source});
 
-  Token get current => pos < tokens.length
-    ? tokens[pos] : tokens[tokens.length - 1];
+  Token get _current => _pos < tokens.length
+    ? tokens[_pos] : tokens[tokens.length - 1];
 
-  Token get prev => 
-    0 <= pos - 1 && pos - 1 < tokens.length
-      ? tokens[pos - 1]
+  Token get _prev => 
+    0 <= _pos - 1 && _pos - 1 < tokens.length
+      ? tokens[_pos - 1]
       : tokens[0];
 
-  bool get isAtEnd => current.type == TokenType.eof;
+  bool get _isAtEnd => _current.type == TokenType.eof;
 
-  Position _p(int start) => (start: start, length: prev.end - start); 
+  Position _p(int start) => (start: start, length: _prev.end - start); 
+  
+  Expr interpret(List<Token> tokens) {
+    final I = _pos;
+    _pos = this.tokens.length;
+    // add new tokens at end
+    this.tokens.addAll(tokens);
+    
+    final expr = _expression();
+    
+    // remove new tokens from end
+    this.tokens.removeRange(this.tokens.length - tokens.length, this.tokens.length - 1);
+    _pos = I;
+    return expr;
+  }
   
   Program parse() {
+    _pos = 0;
     List<Declaration> declarations = [];
 
-    while (!isAtEnd) {
-      final decl = parseDecl();
+    while (!_isAtEnd) {
+      final decl = _parseDecl();
 
       if (decl == null)
         break;
@@ -40,8 +55,8 @@ class Parser {
     return Program(declarations);
   }
 
-  Declaration? parseDecl() {
-    final start = current.start;
+  Declaration? _parseDecl() {
+    final start = _current.start;
 
     String? name = null; 
     if (_is(TokenType.identifier))
@@ -79,12 +94,12 @@ class Parser {
 
   Expr _expression() {
     final expr = _ternary();
-    ignoreSemicolons();
+    _ignoreSemicolons();
     return expr;
   }
 
   Expr _ternary() {
-    final start = current.start;
+    final start = _current.start;
     final condition = _merge();
 
     if (_match(TokenType.question)) {
@@ -102,12 +117,12 @@ class Parser {
   }
 
   Expr _merge() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _or();
 
     loop:
     while (true) {
-      final type = current.type;
+      final type = _current.type;
       switch (type) {
         case TokenType.coalesce:
         case TokenType.guard:
@@ -124,7 +139,7 @@ class Parser {
   }
 
   Expr _or() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _xor();
     while (_match(TokenType.logicalOr))
       expr = LogicalExpr(expr, TokenType.logicalOr, _xor(), _p(start));
@@ -133,7 +148,7 @@ class Parser {
   }
 
   Expr _xor() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _and();
     while (_match(TokenType.logicalXor))
       expr = LogicalExpr(expr, TokenType.logicalXor, _and(), _p(start));
@@ -142,7 +157,7 @@ class Parser {
   }
 
   Expr _and() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _equality();
     while (_match(TokenType.logicalAnd))
       expr = LogicalExpr(expr, TokenType.logicalAnd, _equality(), _p(start));
@@ -152,12 +167,12 @@ class Parser {
 
 
   Expr _equality() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _comparison();
 
     loop:
     while (true) {
-      final type = current.type;
+      final type = _current.type;
       switch (type) {
         case TokenType.equalEqual:
         case TokenType.notEqual:
@@ -178,12 +193,12 @@ class Parser {
   }
 
   Expr _comparison() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _bitOr();
 
     loop:
     while (true) {
-      final type = current.type;
+      final type = _current.type;
       switch (type) {
         case TokenType.less:
         case TokenType.greater:
@@ -202,7 +217,7 @@ class Parser {
   }
 
   Expr _bitOr() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _bitXor();
     while (_match(TokenType.bitOr))
       expr = BinaryExpr(expr, TokenType.bitOr, _bitXor(), _p(start));
@@ -211,7 +226,7 @@ class Parser {
   }
 
   Expr _bitXor() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _bitAnd();
     while (_match(TokenType.bitXor))
       expr = BinaryExpr(expr, TokenType.bitXor, _bitAnd(), _p(start));
@@ -220,7 +235,7 @@ class Parser {
   }
 
   Expr _bitAnd() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _shift();
     while (_match(TokenType.bitAnd))
       expr = BinaryExpr(expr, TokenType.bitAnd, _shift(), _p(start));
@@ -229,12 +244,12 @@ class Parser {
   }
 
   Expr _shift() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _additive();
 
     loop:
     while (true) {
-      final type = current.type;
+      final type = _current.type;
       switch (type) {
         case TokenType.shiftLeft:
         case TokenType.shiftRight:
@@ -253,12 +268,12 @@ class Parser {
   }
 
   Expr _additive() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _term();
 
     loop:
     while (true) {
-      final type = current.type;
+      final type = _current.type;
       switch (type) {
         case TokenType.plus:
         case TokenType.minus:
@@ -275,12 +290,12 @@ class Parser {
   }
 
   Expr _term() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _power();
 
     loop:
     while (true) {
-      final type = current.type;
+      final type = _current.type;
       switch (type) {
         case TokenType.star:
         case TokenType.slash:
@@ -299,7 +314,7 @@ class Parser {
   }
 
   Expr _power() {
-    final start = current.start;
+    final start = _current.start;
     var expr = _unary();
     if (_match(TokenType.power))
       expr = BinaryExpr(expr, TokenType.power, _power(), _p(start));
@@ -308,8 +323,8 @@ class Parser {
   }
 
   Expr _unary() {
-    final start = current.start;
-    final type = current.type;
+    final start = _current.start;
+    final type = _current.type;
     switch (type) {
       case TokenType.not:
         _advance();
@@ -327,7 +342,7 @@ class Parser {
   }
 
   Expr _primary() {
-    final start = current.start;
+    final start = _current.start;
     final cur = _advance();
 
     switch (cur.type) {
@@ -387,14 +402,14 @@ class Parser {
         return expr;
 
       default:
-        _error("Unexpected token: ${current.lexeme}");
+        _error("Unexpected token: ${_current.lexeme}");
         return InvalidExpr.instance;
     }
 
   }
   
-  void ignoreSemicolons() {
-    while (_is(TokenType.semicolon)) pos++;
+  void _ignoreSemicolons() {
+    while (_is(TokenType.semicolon)) _pos++;
   }
 
   bool _error(String msg, [int start = -1, int len = 1]) {
@@ -402,15 +417,15 @@ class Parser {
   }
 
   Token _advance() {
-    final c = current;
-    if (!isAtEnd)
-      pos++;
+    final c = _current;
+    if (!_isAtEnd)
+      _pos++;
 
     return c;
   }
 
   Token _peek([int index = 0]) {
-    final newPos = pos + index;
+    final newPos = _pos + index;
 
     if (0 <= newPos && newPos < tokens.length)
       return tokens[newPos];
@@ -418,7 +433,7 @@ class Parser {
     return Token.INVALID;
   }
 
-  bool _is(TokenType type) => current.type == type;
+  bool _is(TokenType type) => _current.type == type;
 
   bool _match(TokenType type) {
     if (_is(type)) {
@@ -432,7 +447,7 @@ class Parser {
     if (_match(type))
       return false;
 
-    _error(msg, current.start, current.len);
+    _error(msg, _current.start, _current.len);
     return true;
   }
 }
