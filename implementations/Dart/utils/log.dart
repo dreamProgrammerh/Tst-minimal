@@ -55,6 +55,7 @@ void printEval<T extends EvalResult>(T result) {
     codeColor = "\x1B[36m",
     
     sideSpace = ' ' * (spaceAround ~/ 2), 
+    emptyTable = "No Data",
     invalidValue = "Invalid",
     colorTitle = "Color",
     nameTitle = "Name",
@@ -68,6 +69,23 @@ void printEval<T extends EvalResult>(T result) {
     maxValueLength = _max(12, valueTitle.length),
     maxCodeLength = _max(10, codeTitle.length);
 
+  
+    // case for empty result
+    if (result.length == 0) {
+      final width = maxColorLength + maxNameLength + maxValueLength + maxCodeLength
+        + (spaceAround * 4) // spaces around
+        + 5; // pipes  |
+      
+      final remaining = width - emptyTable.length - 2;
+      final lSpace = remaining ~/ 2;
+      final rSpace = remaining - lSpace;
+      sb.write('$tableColor|${'-' * (width - 2)}|\n');
+      sb.write('|${' ' * lSpace}$emptyTable${' ' * rSpace}|\n');
+      sb.write('|${'-' * (width - 2)}|$reset');
+      
+      print(sb.toString());
+      return;
+    }
   
   // organize the table
   List<_TableRow> table = List.generate(result.length,
