@@ -32,6 +32,22 @@ class TstmRun {
     StringBuffer? buffer
   }) async {
     final source = await Source.from(filePath);
+    return _init(source, buffer, reporter);
+  }
+  
+  static TstmRun? syncFrom(String filePath, {
+    required ErrorReporter reporter,
+    StringBuffer? buffer
+  }) {
+    final source = Source.syncFrom(filePath);
+    return _init(source, buffer, reporter);
+  }
+  
+  static TstmRun? _init(
+    Source? source,
+    StringBuffer? buffer,
+    ErrorReporter reporter
+  ) {  
     if (source == null) {
       reporter.push(ResolverError("Source file not found", -1));
       return null;

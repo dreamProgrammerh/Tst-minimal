@@ -17,6 +17,14 @@ class Source {
     return Source(await file.readAsString(), _getFileName(path));
   }
 
+  static Source? syncFrom(String path) {
+    final file = File(path);
+    if (! file.existsSync())
+      return null;
+
+    return Source(file.readAsStringSync(), _getFileName(path));
+  }
+
   static String _getFileName(String path) {
     return path.substring((path.lastIndexOf('/') + 1).clamp(0, path.length - 1), path.length);
   }
