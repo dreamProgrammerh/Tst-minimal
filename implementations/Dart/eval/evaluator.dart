@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math' as Math;
 
 import '../constants/const-eval.dart' as EVAL;
@@ -137,6 +136,7 @@ RuntimeValue _evalLiteral(LiteralExpr e, EvalContext ctx) {
 
   return res;
 }
+
 RuntimeValue _evalCall(CallExpr e, EvalContext ctx) {
   RuntimeValue res;
   

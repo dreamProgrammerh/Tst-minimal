@@ -10,13 +10,13 @@ class EvalEntry {
 } 
 
 abstract class EvalResult {
-  int _i;
+  int _i = -1;
   
   int get length => 0;
   bool get end => _i >= length;
   EvalEntry? get current => null;
   
-  EvalResult(): _i = -1;
+  EvalResult();
   
   RuntimeValue? operator [] (Object index) => InvalidValue.instance;
   void operator []= (Object index, RuntimeValue val) => null;
@@ -30,7 +30,7 @@ abstract class EvalResult {
   }
   
   void reset() {
-    _i = 0;
+    _i = -1;
   }
 }
 
@@ -40,7 +40,7 @@ class EvalList extends EvalResult {
   int get length => list.length;
   EvalEntry? get current => end ? null : list[_i];
 
-  EvalList(this.list): super();
+  EvalList(this.list);
   
   int _find(Object index) {
     switch (index) {
@@ -88,7 +88,7 @@ class EvalMap extends EvalResult {
    return EvalEntry(key: cur.key, value: cur.value);
   }
   
-  EvalMap(this.map): _it = map.entries, super();
+  EvalMap(this.map): _it = map.entries;
 
   RuntimeValue? operator [] (Object index) {
     switch (index) {

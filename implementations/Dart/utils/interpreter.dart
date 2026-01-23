@@ -320,7 +320,7 @@ class TstmInterpreter {
       _SettingArg('.runmode', _runModesString, _argRunMode),
       _SettingArg('.run', null, (_, input, _) => _argRun(input)),
       _SettingArg('.mode', OutputMode.values.map<String>((e) => e.name).toList(), _argMode),
-      _SettingArg('.print', ["colors", "time", "runmode", "mode"], _argPrint),
+      _SettingArg('.print', ["colors", "time", "runmode", "mode", "env"], _argPrint),
     ];
   }
 
@@ -414,6 +414,9 @@ or start with '.' to use shell arguments:
         case 3:
           print(_outModes.map((m) => m.name).join(', '));
           break;
+          
+        case 4:
+          Log.printEval(ctx.map);
 
         default:
       }

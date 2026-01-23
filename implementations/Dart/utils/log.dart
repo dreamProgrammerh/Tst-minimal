@@ -88,7 +88,7 @@ void printEval<T extends EvalResult>(T result) {
     }
   
   // organize the table
-  List<_TableRow> table = List.generate(result.length,
+  final table = List<_TableRow>.generate(result.length,
     (_) => new _TableRow(
       color: '',
       name: '',
@@ -98,6 +98,7 @@ void printEval<T extends EvalResult>(T result) {
   
   // fill table with data
   int i = 0;
+  result.reset();
   while (result.next()) {
     final entry = result.current;
     if (entry == null) break;
@@ -136,7 +137,7 @@ void printEval<T extends EvalResult>(T result) {
     maxCodeLength = _max(maxCodeLength, row.code.length);
   }
   i = 0;
-
+  result.reset();
   
   // build table header
   sb.write("$tableColor|$sideSpace${
