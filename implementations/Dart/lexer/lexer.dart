@@ -198,6 +198,7 @@ class Lexer {
       return _identifier();
 
     _error("Unexpected character: '$c'", _pos);
+    _pos++;
     return Token.INVALID;
   }
 
