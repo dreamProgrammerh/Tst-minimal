@@ -38,7 +38,7 @@ void registerFuncWithArgs(String name, int argsCount, BuiltinFunction fn) {
 class EvalContext {
   final Program program;
 
-  final EvalMap values = EvalMap({});
+  final EvalMap map = EvalMap({});
   final Map<String, RuntimeFunction> functions = {};
   final Set<String> stack = {};
 
@@ -55,7 +55,7 @@ class EvalContext {
   RuntimeFunction? getFunction(String name) => _builtinFunctions[name] ?? functions[name];
 
   RuntimeValue resolve(String name) {
-    if (values.map.containsKey(name)) return values[name]!;
+    if (map.map.containsKey(name)) return map[name]!;
 
     final decl = declMap[name];
     if (decl == null) {
@@ -71,7 +71,7 @@ class EvalContext {
     final value = Evaluator.evaluate(decl.expr, this);
 
     stack.remove(name);
-    values[name] = value;
+    map[name] = value;
     return value;
   }
 

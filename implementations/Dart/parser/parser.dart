@@ -93,9 +93,22 @@ class Parser {
 
 
   Expr _expression() {
-    final expr = _ternary();
+    final expr = _inlineDecl();
     _ignoreSemicolons();
     return expr;
+  }
+  
+  Expr _inlineDecl() {
+    if (!(_is(TokenType.identifier) && _peek(1).type == TokenType.colon))
+      return _ternary();
+    
+    final start = _current.start;
+    final name = _advance().lexeme;
+    _advance(); // colon
+    
+    final expr = _expression();
+    
+    return InlineDeclExpr(name, expr, _p(start));
   }
 
   Expr _ternary() {

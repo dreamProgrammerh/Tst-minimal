@@ -57,6 +57,12 @@ class CallExpr extends Expr {
   const CallExpr(this.name, this.args, super.position);
 }
 
+class InlineDeclExpr extends Expr {
+  final String name;
+  final Expr expr;
+  const InlineDeclExpr(this.name, this.expr, super.position);
+}
+
 class NotExpr extends Expr {
   final Expr expr;
   const NotExpr(this.expr, super.position);

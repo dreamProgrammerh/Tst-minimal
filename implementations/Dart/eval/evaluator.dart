@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as Math;
 
 import '../constants/const-eval.dart' as EVAL;
@@ -14,21 +15,19 @@ class Evaluator {
   final ErrorReporter reporter;
   final Source? source;
   
-  const Evaluator(this.program, {required this.reporter, this.source});
+  Evaluator(this.program, {required this.reporter, this.source});
   
   EvalMap eval() {
     RuntimeState.setup(source, reporter);
     final ctx = EvalContext(program);
     
-    EvalMap map = EvalMap({});
-    
     for (final decl in program.declarations) {
       final value = evaluate(decl.expr, ctx);
       if (decl.name != null)
-        map[decl.name!] = value;
+        ctx.map[decl.name!] = value;
     }
     
-    return map;
+    return ctx.map;
   }
   
   static RuntimeValue evaluate(Expr expression, EvalContext ctx) {
@@ -58,6 +57,12 @@ class Evaluator {
         
       case CallExpr callExpr:
         res = _evalCall(callExpr, ctx);
+        break;
+        
+      case InlineDeclExpr declExpr:
+        final value = evaluate(declExpr.expr, ctx);
+        ctx.map[declExpr.name] = value;
+        res = value;
         break;
         
       case NotExpr notExpr:
