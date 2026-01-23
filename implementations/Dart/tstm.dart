@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'error/reporter.dart';
+import 'utils/interpreter.dart';
 import 'utils/run.dart';
 
 void main() async {
@@ -11,13 +14,23 @@ void main() async {
     printImmediately: true,
     printer: (s) => out.writeln(s),
   );
-
-  final runner = await TstmRun.from(filePath, reporter: reporter, buffer: out);
-
-  final time1 = TstmRun.recordTime(() => runner?.run(printResult: true));
-
-  final time2 = TstmRun.recordTime(() => runner?.run(useCatch: true));
   
-  print('without catch: ${time1 / 1000}ms');
-  print('with catch:    ${time2 / 1000}ms');
+  bool runFile = false;
+
+  // ignore: dead_code
+  if (runFile) {
+    final runner = await TstmRun.from(filePath, reporter: reporter, buffer: out);
+    final time = TstmRun.recordTime(() => runner?.run(printResult: false));
+  
+    print('time: ${time * 0.001}ms');
+  } else {
+    final interpreter = TstmInterpreter(reporter: reporter, iteration: (_) {
+      if (reporter.hasErrors) {
+        stderr.write(out);
+        out.clear();
+      }
+    });
+    
+    interpreter.start();
+  }
 }

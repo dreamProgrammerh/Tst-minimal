@@ -12,6 +12,31 @@ import '../runtime/builtins.dart';
 import '../runtime/results.dart';
 import 'log.dart' as Log;
 
+class RunResult {
+  final List<Token>? tokens;
+  final Program program;
+  final EvalMap result;
+  final int lexerTime;
+  final int parserTime;
+  final int evalTime;
+  final int endTime;
+
+  const RunResult({
+    required this.tokens,
+    required this.program,
+    required this.result,
+    required this.lexerTime,
+    required this.parserTime,
+    required this.evalTime,
+    required this.endTime
+  });
+  
+  @override
+  String toString() {
+    return result.toString();
+  }
+}
+
 int _now() => DateTime.now().microsecondsSinceEpoch;
 
 class TstmRun {
@@ -59,7 +84,7 @@ class TstmRun {
   Future<void> _reload() async {
     if (this._source.path == null) return null;
 
-    final source = await Source.from(this._source.path!);
+    final source = await Source.syncFrom(this._source.path!);
     if (source == null) {
       reporter.push(ResolverError("Source file not found", -1));
       return null;
@@ -76,7 +101,7 @@ class TstmRun {
     return end - start;
   }
   
-  EvalMap? run({
+  RunResult? run({
     bool printTokens = false,
     bool printProgram = false,
     bool printResult = false,
@@ -90,21 +115,21 @@ class TstmRun {
     if (seed != null) 
       randomSeed(seed);
     
-    bool wait = false;
+    int lexerTime, parserTime, evalTime, endTime;
     
-    if (reload) {
-      wait = true;
-      _reload().whenComplete(() => wait = false);
-    }
-      
-    while(wait);
-    
+    if (reload)
+      _reload();
+          
+    List<Token>? tokens;
     Program? program;
+    parserTime = lexerTime = _now();
+    
     if (useCatch && _programCatch != null) {
       program = _programCatch!;
       
     } else {
-      final tokens = Lexer(_source, reporter: reporter).lex();
+      lexerTime = _now();
+      tokens = Lexer(_source, reporter: reporter).lex();
     
       if (reporter.hasErrors) {
         stderr.write(buffer);
@@ -114,6 +139,7 @@ class TstmRun {
       if (printTokens)
         for (final token in tokens) print(token);
     
+      parserTime = _now();
       program = Parser(tokens, source: _source, reporter: reporter).parse();
     
       if (reporter.hasErrors) {
@@ -127,6 +153,7 @@ class TstmRun {
         print(program);
     }
     
+    evalTime = _now();
     final evalMap = Evaluator(program, source: _source, reporter: reporter).eval();
   
     if (reporter.hasErrors) {
@@ -137,6 +164,16 @@ class TstmRun {
     if (printResult)
       Log.printEval(evalMap);
     
-    return evalMap;
+    endTime = _now();
+    
+    return RunResult(
+      tokens: tokens,
+      program: program,
+      result: evalMap,
+      lexerTime: lexerTime,
+      parserTime: parserTime,
+      evalTime: evalTime,
+      endTime: endTime
+    );
   }
 }
