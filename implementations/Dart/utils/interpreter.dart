@@ -105,15 +105,15 @@ class TstmInterpreter {
   // ~~~~~~~~~~~~~~~~~~~~
 
   void start({
-    bool clear = true,
+    bool clear = false,
     bool title = true}) {
     if (clear)
       _write('\x1B[2J\x1B[H');
 
     if (title) {
-      _write("\x1B[34mTST\x1B[31mm \x1B[32mv\x1B[0m1.0.0\n");
+      _write("\x1B[34mTst\x1B[31mm \x1B[32mv\x1B[0m1.0.0\n");
       _write("exit using ctrl+c, or '.exit'\n");
-      _write("\x1B[33m'.help' for more information.\x1B[0m\n\n");
+      _write("\x1B[33m'.help' for more information.\x1B[0m\n");
     }
 
     _running = true;
@@ -320,7 +320,7 @@ class TstmInterpreter {
       _SettingArg('.runmode', _runModesString, _argRunMode),
       _SettingArg('.run', null, (_, input, _) => _argRun(input)),
       _SettingArg('.mode', OutputMode.values.map<String>((e) => e.name).toList(), _argMode),
-      _SettingArg('.print', ["colors", "runmode", "mode"], _argPrint),
+      _SettingArg('.print', ["colors", "time", "runmode", "mode"], _argPrint),
     ];
   }
 
@@ -337,6 +337,7 @@ or start with '.' to use shell arguments:
 \x1B[33m- \x1B[34m.exit:\x1B[0m Stop the interpreter.
 \x1B[33m- \x1B[34m.clear:\x1B[0m Clear screen.
 \x1B[33m- \x1B[34m.path:\x1B[0m Show current path.
+\x1B[33m- \x1B[34m.time:\x1B[0m Enable time measurement.
 \x1B[33m- \x1B[34m.help:\x1B[0m Print this message.
 \x1B[33m- \x1B[34m.prompt:\x1B[0m Change interpreter prefix.
 \x1B[33m- \x1B[34m.runmode:\x1B[0m Set run print mode.
@@ -403,10 +404,14 @@ or start with '.' to use shell arguments:
           break;
 
         case 1:
-          print(_runModes.map((i) => _runModesString[i]).join(', '));
+          print(_timeModes.map((m) => m.name).join(', '));
           break;
 
         case 2:
+          print(_runModes.map((i) => _runModesString[i]).join(', '));
+          break;
+
+        case 3:
           print(_outModes.map((m) => m.name).join(', '));
           break;
 
