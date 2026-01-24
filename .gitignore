@@ -1,2 +1,15 @@
 # Configs
 codebook.toml
+
+# IDEs
+.idea/
+.zed/
+.vscode/
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
