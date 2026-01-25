@@ -6,9 +6,9 @@
 #include "fmath.c"
 
 int main() {
-    clockUs();
-    fmath_initRandom();
+    fmath_init();
 
+    printf("genseed: %lld\n", fmath_genseed());
     printf("now: %lld\n", fmath_now());
     printf("uptime: %lld\n", fmath_uptime());
     printf("clock: %lld\n", fmath_clock());

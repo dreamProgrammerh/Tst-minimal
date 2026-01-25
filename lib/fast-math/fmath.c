@@ -9,6 +9,7 @@
 
 #include "fmath.h"
 #include "ftime.h"
+#include "platform.h"
 
 // ==================
 //     GLOBALS
@@ -56,13 +57,50 @@ u64 _nextBits(const i32 bits) {
 }
 
 u64 PREFIXED(genseed)() {
-  return (nowUs() + clockUs()) ^ (_initTime + uptimeUs());
+    // Time-based entropy sources
+    const u64 now     = nowUs();     // Affected by NTP adjustments
+    const u64 uptime  = uptimeUs();  // Monotonic, survives time changes
+    const u64 clock   = clockUs();   // High-res, program-relative
+    
+    // System identity sources
+    const u64 pid     = getPid();             // Unique per process
+    const u64 tid     = getTid();             // Unique per thread (usually)
+    const u64 cpu     = getCpuTimestamp();    // CPU cycle counter
+    
+    // Memory layout entropy (exploits ASLR)
+    const u64 addr    = getVaryingAddress();
+    
+    // Constants from good hash functions (ensure good mixing)
+    const u64 prime1 = 0x9E3779B97F4A7C15ULL;  // Golden ratio
+    const u64 prime2 = 0xBF58476D1CE4E5B9ULL;  // splitmix64 constant
+    const u64 prime3 = 0x94D049BB133111EBULL;  // Another good prime
+    const u64 prime4 = 0xC4CEB9FE1A85EC53ULL;  // Final mixer
+    
+    // Initial mixing: multiply each source with different prime
+    // This spreads entropy across all bits before XOR
+    u64 hash = now * prime1;
+    hash ^= uptime * prime2;
+    hash ^= clock * prime3;
+    hash ^= pid * 0x85EBCA6BULL;
+    hash ^= tid * 0xC2B2AE35ULL;
+    
+    // Add CPU timestamp if available (high-resolution)
+    if (cpu != 0) {
+        hash ^= cpu * 0x27D4EB2FULL;
+    }
+    
+    // Add memory address entropy (last, as it's less "random" but varies)
+    hash ^= addr;
+    
+    // Final thorough mixing (avalanche effect)
+    hash = mix64(hash);
+    
+    // Return lower 32 bits (most mixed)
+    return (u64)(hash & 0xFFFFFFFF);
 }
 
 void PREFIXED(seed)(const u64 seed) {
-    _rseed = seed == 0
-        ? PREFIXED(genseed)()
-        : seed;
+    _rseed = seed == 0 ? PREFIXED(genseed)() : seed;
 
     _rstate = (_rseed ^ _a) & _mask48;
 

@@ -182,9 +182,15 @@ late final int Function() uptime;
 /// Returns: microseconds from an arbitrary starting point
 late final int Function() clock;
 
-/// Generates a random seed based on current time and system state
-/// Returns: 32-bit integer suitable for seeding RNG
-/// Formula: (now + clock) ^ (initTime + uptime)
+/// Generates a random seed by combining multiple system entropy sources
+/// 
+/// Uses current time, system uptime, process ID, and memory layout
+/// to create a unique seed suitable for random number generation.
+/// 
+/// Returns: A 32-bit integer seed (0 to 4,294,967,295)
+/// 
+/// Note: Passing seed=0 to seed() or noise() functions will
+/// automatically call this function internally.
 late final int Function() genseed;
 
 // ====================================================
@@ -349,7 +355,8 @@ late final double Function(double edge, double x) step;
 /// Factorial function (n!)
 /// [n]: Non-negative integer (0 ≤ n ≤ 20)
 /// Returns: n! = n × (n-1) × ... × 1
-/// Case: -1 if n < 0 or n > 20
+/// Case:  0 if n < 0
+/// Case: -1 if n > 20  
 late final int Function(int n) factorial;
 
 /// Binomial coefficient "n choose k"
