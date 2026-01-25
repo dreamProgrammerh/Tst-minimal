@@ -107,13 +107,14 @@ void load_fmathLib() {
   if (_libraryPath == null)
     throw UnsupportedOSError(Platform.operatingSystem.toString());
   
-  else if (File(_libraryPath!).existsSync())
+  else if (! File(_libraryPath!).existsSync())
     throw MissingLibraryError("fastMath", _libraryPath);
     
   _lib = c.DynamicLibrary.open(_libraryPath!);
   
   _loadFunctions();
   _init();
+  _loadVariables();
 }
 
 /// Mathematical constants and utility functions library.
@@ -162,6 +163,57 @@ const double radToDeg = 180.0 / pi;
 /// Inverse of pi (1/π ≈ 0.3183098861837907)
 /// Useful in probability and signal processing.
 const double invPi = 1.0 / pi;
+
+// ====================================================
+// VARIABLES
+// ====================================================
+
+/// The timestamp when the math library was initialized.
+/// 
+/// This is set when `load_fmathLib()` is called and represents
+/// the system uptime in microseconds at initialization.
+/// 
+/// Useful for:
+/// - Measuring time elapsed since library load
+/// - Creating time-based IDs that are unique to this program instance
+/// - Debugging timing-related issues
+/// 
+/// Example:
+/// ```dart
+/// final timeSinceInit = uptime() - initTime;
+/// print('Library loaded $timeSinceInit us ago');
+/// ```
+late final int initTime;
+
+/// The most recent seed value used to initialize the RNG.
+/// 
+/// This tracks the last seed passed to the `seed()` function,
+/// or the auto-generated seed if `seed(0)` was called.
+/// 
+/// Useful for:
+/// - Debugging random number issues
+/// - Saving and restoring RNG state in games
+/// - Verifying that seeding worked correctly
+/// 
+/// Example:
+/// ```dart
+/// seed(42);
+/// print('Current RNG seeded with: $lastSeed');  // Prints: 42
+/// ```
+late final int lastSeed;
+
+/// Current state of the random number generator.
+/// 
+/// This is the internal state used by the PCG or similar RNG algorithm.
+/// Advanced users can read this for debugging or save/restore RNG state.
+/// 
+/// ! **Warning**: Modifying this directly may break random number sequences.
+/// Use `seed()` function to properly reset the RNG state.
+/// 
+/// Type: 64-bit unsigned integer (platform-dependent)
+/// Visibility: Package-private
+// ignore: unused_element
+late final int _randomState;
 
 // ====================================================
 // TIME FUNCTIONS
@@ -668,6 +720,11 @@ late final double Function(double x, double y) pow;
 /// Returns: √(x² + y²)
 late final double Function(double x, double y) hypot;
 
+void _loadVariables() {
+  initTime      = _lib.lookup<c.Uint64>('_initTime').value;
+  lastSeed      = _lib.lookup<c.Uint64>('_rseed').value;
+  _randomState  = _lib.lookup<c.Uint64>('_rstate').value;
+}
 
 void _loadFunctions() {
   _init = _lib.lookupFunction<

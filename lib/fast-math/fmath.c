@@ -14,9 +14,9 @@
 // ==================
 //     GLOBALS
 // ==================
-static u64 _initTime;
-u64 _rstate;
+volatile u64 _initTime;
 u64 _rseed;
+u64 _rstate;
 
 // ==================
 //     UTILITIES
@@ -32,7 +32,7 @@ static const f64 _rrange = 1.0 / (1ULL << 53);
 
 void PREFIXED(init)() {
     clockUs(); // init start time
-    _initTime = nowUs();
+    _initTime = getStartUs();
     PREFIXED(seed)(0);
 }
 

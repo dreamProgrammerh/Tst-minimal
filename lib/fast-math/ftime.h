@@ -3,14 +3,6 @@
 
 #include "types.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#endif
-
 #if defined(_WIN32) || defined(_WIN64)
   #include <windows.h>
   static LARGE_INTEGER start_time;
@@ -83,7 +75,7 @@ static inline u64 uptimeUs() {
 
 // passed time of program start (call once on program start)
 static inline u64 clockUs() {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
   if (start_time.QuadPart == 0)
     QueryPerformanceCounter(&start_time);
 
@@ -111,6 +103,19 @@ static inline u64 clockUs() {
 
   return (u64)((current_time.tv_sec - start_time.tv_sec) * 1e6 +
                 (current_time.tv_nsec - start_time.tv_nsec) * 1e-3);
+  
+#endif
+}
+
+// get start_time
+static inline u64 getStartUs() {
+#if defined(_WIN32) || defined(_WIN64)
+  return (u64)start_time.QuadPart
+            / 10ULL/* take 10unit from QuadPart to get prefect microseconds */;
+  
+#else
+  return (u64)(start_time.tv_sec * 1e6 +
+                start_time.tv_nsec * 1e-3);
   
 #endif
 }

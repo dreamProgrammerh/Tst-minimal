@@ -8,6 +8,7 @@
 int main() {
     fmath_init();
 
+    printf("init: %lld\n", _initTime);
     printf("genseed: %lld\n", fmath_genseed());
     printf("now: %lld\n", fmath_now());
     printf("uptime: %lld\n", fmath_uptime());

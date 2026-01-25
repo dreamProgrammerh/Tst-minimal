@@ -39,8 +39,8 @@ extern "C" {
 // ==================
 //     GLOBALS
 // ==================
-extern u64 _rseed;
 extern u64 _rstate;
+extern u64 _rseed;
 
 // ==================
 //     UTILITIES
