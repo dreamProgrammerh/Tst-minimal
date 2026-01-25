@@ -8,7 +8,7 @@ final String? _libraryPath =
       : Platform.isLinux ? "lib/fastMath.so"
       : null;
       
-late final _lib;
+late final c.DynamicLibrary _lib;
 
 void load_fmathLib() {
   if (_libraryPath == null)
@@ -17,8 +17,5 @@ void load_fmathLib() {
   _lib = c.DynamicLibrary.open(_libraryPath!);
 }
 
-dynamic _loadFunc<T extends Function>(String name) => _lib
-  .lookup<c.NativeFunction<T>>(name)
-  .asFunction();
-
-final int Function() now = _loadFunc<c.Uint64 Function()>('${_p}now');
+final now = _lib
+  .lookupFunction<c.Uint64 Function(), int Function()>('${_p}now');
