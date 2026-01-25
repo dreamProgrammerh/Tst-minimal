@@ -21,6 +21,16 @@ void load_fmathLib() {
   _init();
 }
 
+final _malloc = c.DynamicLibrary.process().lookupFunction<
+  c.Pointer<c.Void> Function(c.IntPtr size),
+  c.Pointer<c.Void> Function(int size)
+>('malloc');
+
+final _free = c.DynamicLibrary.process().lookupFunction<
+  c.Void Function(c.Pointer<c.Void> ptr),
+  void Function(c.Pointer<c.Void> ptr)
+>('free');
+
 late final void Function() _init;
 
 late final int Function() now;
@@ -231,11 +241,19 @@ void _loadFunctions() {
     >('${_p}randomBytes', isLeaf: true);
   
   randomBytes = (size) {
-    final buffer = Uint8List(size);
-    // TODO: try to find a solution
-    // _randomBytesC(buffer.address, size);
+    // Allocate native memory using C lib malloc
+    final pointer = _malloc(size).cast<c.Uint8>();
     
-    return buffer;
+    try {
+      // Call C function
+      _randomBytesC(pointer, size);
+      
+      // Copy bytes to Dart list
+      return pointer.asTypedList(size);
+    } finally {
+      // free the memory
+      _free(pointer.cast<c.Void>());
+    }
   };
     
   min = _lib.lookupFunction<
