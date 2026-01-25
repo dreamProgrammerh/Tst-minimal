@@ -69,6 +69,27 @@ final randomByte = _lib.lookupFunction<
   int Function()
   >('${_p}randomByte');
   
+final min = _lib.lookupFunction<
+  c.Double Function(c.Double a, c.Double b),
+  double Function(double a, double b)
+  >('${_p}min');
+  
+final max = _lib.lookupFunction<
+  c.Double Function(c.Double a, c.Double),
+  double Function(double a, double b)
+  >('${_p}max');
+  
+final med = _lib.lookupFunction<
+  c.Double Function(c.Double a, c.Double b, c.Double c),
+  double Function(double a, double b, double c)
+  >('${_p}med');
+  
+
+final clamp = _lib.lookupFunction<
+  c.Double Function(c.Double value, c.Double min, c.Double max),
+  double Function(double value, double min, double max)
+  >('${_p}clamp');
+  
 final abs = _lib.lookupFunction<
   c.Double Function(c.Double x),
   double Function(double x)

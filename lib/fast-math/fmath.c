@@ -120,6 +120,11 @@ void PREFIXED(randomBytes(u8* buffer, const u64 size)) {
     }
 }
 
+f64 PREFIXED(min)(f64 a, f64 b) { return MIN(a, b);}
+f64 PREFIXED(max)(f64 a, f64 b) { return MAX(a, b);}
+f64 PREFIXED(med)(f64 a, f64 b, f64 c) { return MED(a, b, c);}
+f64 PREFIXED(clamp)(f64 value, f64 min, f64 max) { return CLAMP(value, min, max);}
+
 f64 PREFIXED(abs)(const f64 x) { return x < 0 ? -x : x; }
 i32 PREFIXED(sign)(const f64 x) { return (x > 0) - (x < 0); }
 
