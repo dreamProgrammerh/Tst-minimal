@@ -36,6 +36,27 @@ final _free = c.DynamicLibrary.process().lookupFunction<
   void Function(c.Pointer<c.Void> ptr)
 >('free');
 
+/// The operating system is not supported.
+@pragma("vm:entry-point")
+class UnsupportedOSError extends Error {
+  final String os;
+  @pragma("vm:entry-point")
+  UnsupportedOSError(this.os);
+  String toString() => "Unsupported Operating System: $os";
+}
+
+/// Promised library was missing.
+///
+/// This [Error] is thrown when a library expected to exist
+/// at specific location yet not found.
+@pragma("vm:entry-point")
+class MissingLibraryError extends Error {
+  final String name;
+  final String? path;
+  @pragma("vm:entry-point")
+  MissingLibraryError(this.name, this.path);
+  String toString() => "Missing Library '$name'${path == null ? '' : ' at "$path"'}";
+}
 
 /// ====================================================
 /// LIBRARY INITIALIZATION
@@ -84,8 +105,11 @@ late final c.DynamicLibrary _lib;
 /// 
 void load_fmathLib() {
   if (_libraryPath == null)
-    throw UnsupportedError("Unsupported Operating System: ${Platform.operatingSystem}");
+    throw UnsupportedOSError(Platform.operatingSystem.toString());
   
+  else if (File(_libraryPath!).existsSync())
+    throw MissingLibraryError("fastMath", _libraryPath);
+    
   _lib = c.DynamicLibrary.open(_libraryPath!);
   
   _loadFunctions();
