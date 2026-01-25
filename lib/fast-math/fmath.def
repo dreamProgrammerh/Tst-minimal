@@ -1,9 +1,9 @@
 LIBRARY fmath
 EXPORTS
+    fmath_init
     fmath_now
     fmath_uptime
-    fmath_programtime
-    fmath_initRandom
+    fmath_clock
     fmath_genseed
     fmath_seed
     fmath_random

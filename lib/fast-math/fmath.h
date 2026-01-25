@@ -46,11 +46,12 @@ extern u64 _rstate;
 //     UTILITIES
 // ==================
 
+void PREFIXED(init)();
+
 u64 PREFIXED(now)();
 u64 PREFIXED(uptime)();
-u64 PREFIXED(programtime)();
+u64 PREFIXED(clock)();
 
-void PREFIXED(initRandom)();
 u64 PREFIXED(genseed)();
 void PREFIXED(seed)(u64 seed);
 f64 PREFIXED(random)();

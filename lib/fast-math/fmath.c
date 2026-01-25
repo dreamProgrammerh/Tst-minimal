@@ -29,6 +29,12 @@ static const u64 _mask48 = (1ULL << 48) - 1;
 static const u64 _maxint = 0x7FFFFFFF; /* 2,147,483,647 */
 static const f64 _rrange = 1.0 / (1ULL << 53);
 
+void PREFIXED(init)() {
+    clockUs(); // init start time
+    _initTime = nowUs();
+    PREFIXED(seed)(0);
+}
+
 u64 PREFIXED(now)() {
     return nowUs();
 }
@@ -41,12 +47,6 @@ u64 PREFIXED(clock)() {
     return clockUs();
 }
 
-void PREFIXED(initRandom)() {
-    clockUs(); // init start time
-    _initTime = PREFIXED(now)();
-    PREFIXED(seed)(0);
-}
-
 u64 _nextState() {
     return _rstate = (_a * _rstate + _c) & _mask48;
 }
@@ -56,7 +56,7 @@ u64 _nextBits(const i32 bits) {
 }
 
 u64 PREFIXED(genseed)() {
-  return nowUs() ^ (_initTime + uptimeUs());
+  return (nowUs() + clockUs()) ^ (_initTime + uptimeUs());
 }
 
 void PREFIXED(seed)(const u64 seed) {
