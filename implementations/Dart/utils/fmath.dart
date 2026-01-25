@@ -31,6 +31,20 @@ final _free = c.DynamicLibrary.process().lookupFunction<
   void Function(c.Pointer<c.Void> ptr)
 >('free');
 
+const double 
+  e     = 2.718281828459045,
+  pi    = 3.1415926535897932,
+  hpi   = 1.5707963267948966,
+  tau   = 6.283185307179586,
+  ln2   = 0.6931471805599453,
+  ln10  = 2.302585092994046,
+  sqrt2 = 1.4142135623730951,
+  
+  // Precomputed conversion factors
+  degToRad = pi / 180.0,      // 0.017453292519943295
+  radToDeg = 180.0 / pi,      // 57.29577951308232
+  invPi    = 1.0 / pi;        // 0.3183098861837907
+
 late final void Function() _init;
 
 late final int Function() now;
