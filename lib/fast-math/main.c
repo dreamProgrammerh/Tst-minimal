@@ -7,6 +7,15 @@
 #include "fmath.c"
 #include "kthindex.c"
 
+int cmp(const void* a, const void* b) {
+    return *(i32*)a - *(i32*)b;
+}
+int cmp2(void* ctx, const i32 i1, const i32 i2) {
+    f64* arr = ctx;
+    const f64 res = arr[i1] - arr[i2];
+    return res > 0 ? 1 : res < 0 ? -1 : 0;
+}
+
 int main() {
     fmath_init();
 
@@ -15,8 +24,11 @@ int main() {
     const u32 sizei = sizeof(arri) / sizeof(arri[0]);
     const u32 sized = sizeof(arrd) / sizeof(arrd[0]);
 
-    printf("med int: %d\n", arri[KthIndexInt((i32*)&arri, sizei, KTH_MEDIAN)]);
-    printf("med double: %g\n", arrd[KthIndexDouble((f64*)&arrd, sized, -2)]);
+    printf("med int: %d\n", arri[KthIndexInt((i32*)&arri, sizei, 0)]);
+    printf("big 2 double: %g\n", arrd[KthIndexDouble((f64*)&arrd, sized, 3)]);
+    printf("big 1 compare ctx: %d\n", arri[KthIndexGeneric((void*)&arri, sizei, 1, sizeof(arri[0]), cmp)]);
+    printf("small 4 compare ctx: %g\n", arrd[KthIndexContext(sized, 4, (void*)&arrd, cmp2)]);
+    
     printf("init: %lld\n", _initTime);
     printf("genseed: %lld\n", fmath_genseed());
     printf("now: %lld\n", fmath_now());
