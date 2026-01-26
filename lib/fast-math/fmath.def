@@ -1,5 +1,9 @@
 LIBRARY fmath
 EXPORTS
+    KthIndexInt
+    KthIndexDouble
+    KthIndexGeneric
+
     fmath_init
     fmath_now
     fmath_uptime

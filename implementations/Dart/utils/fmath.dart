@@ -58,6 +58,49 @@ class MissingLibraryError extends Error {
   String toString() => "Missing Library '$name'${path == null ? '' : ' at "$path"'}";
 }
 
+abstract class ByteRepresentation<T> {
+  /// Size of this type in bytes when serialized
+  int get sizeInBytes;
+  
+  /// Convert to bytes
+  Uint8List toBytes();
+  
+  /// Create from bytes
+  T fromBytes(Uint8List bytes);
+}
+
+/// Convert bytes at pointer to object
+T _bytesToObject<T>(c.Pointer<c.Void> ptr, int size) {
+  // Read bytes from pointer
+  final byteList = ptr.cast<c.Uint8>().asTypedList(size);
+  
+  // Convert bytes to object
+  return _fromBytes<T>(byteList);
+}
+
+/// Convert bytes to object based on type
+T _fromBytes<T>(Uint8List bytes) {
+  final byteData = ByteData.sublistView(bytes);
+  
+  if (T == int) {
+    if (bytes.length == 4) {
+      return byteData.getInt32(0, Endian.host) as T;
+    } else if (bytes.length == 8) {
+      return byteData.getInt64(0, Endian.host) as T;
+    }
+  } 
+  else if (T == double) {
+    if (bytes.length == 4) {
+      return byteData.getFloat32(0, Endian.host) as T;
+    } else if (bytes.length == 8) {
+      return byteData.getFloat64(0, Endian.host) as T;
+    }
+  }
+  
+  // For custom types, you'd need specific deserialization
+  throw UnsupportedError('Cannot convert bytes to type $T');
+}
+
 /// ====================================================
 /// LIBRARY INITIALIZATION
 /// ====================================================
@@ -163,6 +206,8 @@ const double radToDeg = 180.0 / pi;
 /// Inverse of pi (1/π ≈ 0.3183098861837907)
 /// Useful in probability and signal processing.
 const double invPi = 1.0 / pi;
+
+const int kthMedian = 0xFFFFFFFF;  // Use for kth median case
 
 // ====================================================
 // VARIABLES
@@ -720,6 +765,19 @@ late final double Function(double x, double y) pow;
 /// Returns: √(x² + y²)
 late final double Function(double x, double y) hypot;
 
+// ====================================================
+// KTH INDEX FUNCTIONS
+// ====================================================
+
+typedef KthCompareFuncNative = c.Int32 Function(c.Pointer<c.Void>, c.Pointer<c.Void>);
+typedef KthCompareFuncDart = int Function(c.Pointer<c.Void>, c.Pointer<c.Void>);
+
+late final int Function<T>(List<T> arr, int k, int Function(T a, T b)) kthIndex;
+
+late final int Function(List<int> arr, int k) kthIndexInt;
+
+late final int Function(List<double> arr, int k) kthIndexDouble;
+
 void _loadVariables() {
   initTime      = _lib.lookup<c.Uint64>('_initTime').value;
   lastSeed      = _lib.lookup<c.Uint64>('_rseed').value;
@@ -1122,4 +1180,56 @@ void _loadFunctions() {
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}hypot');
+    
+  
+  final _kth = _lib.lookupFunction<
+    c.Int32 Function(c.Pointer<c.Void> arr, c.Uint32 n, c.Int32 k,
+      c.Size elementSize, c.Pointer<c.NativeFunction<KthCompareFuncNative>> compare),
+    int Function(c.Pointer<c.Void> arr, int n, int k,
+      int elementSize, c.Pointer<c.NativeFunction<KthCompareFuncNative>> compare)
+  >('KthIndexGeneric');
+  
+  final _kthInt = _lib.lookupFunction<
+    c.Int32 Function(c.Pointer<c.Int32> arr, c.Uint32 n, c.Int32 k),
+    int Function(c.Pointer<c.Int32> arr, int n, int k)
+  >('KthIndexInt');
+  
+  final _kthDouble = _lib.lookupFunction<
+    c.Int32 Function(c.Pointer<c.Double> arr, c.Uint32 n, c.Int32 k),
+    int Function(c.Pointer<c.Double> arr, int n, int k)
+  >('KthIndexDouble');
+  
+  kthIndex = <T>(list, k, compare) {
+    if (list.isEmpty) return -1;
+    
+    // i spent 8 hour's trying to write this function
+    // yet nothing worked for me,
+    // i will try to change the c code
+    
+    return -1;
+  };
+  
+  kthIndexInt = (list, k) {
+    if (list.isEmpty) return -1;
+    
+    final ptr = _malloc(list.length).cast<c.Int32>();
+    final nativeList = ptr.asTypedList(list.length);
+    nativeList.setAll(0, list);
+    
+    final result = _kthInt(ptr, list.length, k);
+    _free(ptr.cast<c.Void>());
+    return result;
+  };
+  
+  kthIndexDouble = (list, k) {
+    if (list.isEmpty) return -1;
+    
+    final ptr = _malloc(list.length).cast<c.Double>();
+    final nativeList = ptr.asTypedList(list.length);
+    nativeList.setAll(0, list);
+    
+    final result = _kthDouble(ptr, list.length, k);
+    _free(ptr.cast<c.Void>());
+    return result;
+  };
 }
