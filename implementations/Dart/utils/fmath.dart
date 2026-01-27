@@ -1502,19 +1502,19 @@ void _loadFunctions() {
     >('${_p}hypot');
 
   _kth = _lib.lookupFunction<
-    c.Int32 Function(c.Uint32 n, c.Int32 k, c.Pointer<c.Void> context,
+    c.Int32 Function(c.Int32 n, c.Int32 k, c.Pointer<c.Void> context,
       c.Pointer<c.NativeFunction<_CompareFuncNative>> compare),
     int Function(int n, int k, c.Pointer<c.Void> context,
       c.Pointer<c.NativeFunction<_CompareFuncNative>> compare)
   >('KthIndexContext');
 
   final _kthIntC = _lib.lookupFunction<
-    c.Int32 Function(c.Pointer<c.Int32> arr, c.Uint32 n, c.Int32 k),
+    c.Int32 Function(c.Pointer<c.Int32> arr, c.Int32 n, c.Int32 k),
     int Function(c.Pointer<c.Int32> arr, int n, int k)
   >('KthIndexInt');
 
   final _kthDoubleC = _lib.lookupFunction<
-    c.Int32 Function(c.Pointer<c.Double> arr, c.Uint32 n, c.Int32 k),
+    c.Int32 Function(c.Pointer<c.Double> arr, c.Int32 n, c.Int32 k),
     int Function(c.Pointer<c.Double> arr, int n, int k)
   >('KthIndexDouble');
 

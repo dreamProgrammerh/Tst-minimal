@@ -41,7 +41,7 @@
 #include "types.h"
 
 /** Memory allocation threshold for stack vs heap */
-#define STACK_MAX_SIZE 1e6          // 1M
+#define STACK_MAX_SIZE 100000U // 100K
 
 /** Fast Xorshift64* PRNG seed (thread-safe static) */
 static u64 _kth_seed = 88172645463325252ULL;
@@ -84,15 +84,15 @@ u64 _xorshift64star() {
  * @note Does NOT validate bounds for positive k
  */
 static inline
-i32 _wrap_kth_index(const i32 i, const u32 len) {
+i32 _wrap_kth_index(const i32 i, const i32 len) {
     if (i > 0)
         return i - 1;
 
     if (i < 0)
-        return (i32)len + i;
+        return len + i;
 
     // i == 0
-    return (i32)len / 2;
+    return len / 2;
 }
 
 
@@ -131,8 +131,8 @@ i32 _wrap_kth_index(const i32 i, const u32 len) {
  *   k=-1 → Returns 4 (index of 9, the largest)
  *   k=0 → Returns 0 (index of 5, the median)
  */
-i32 KthIndexInt(const i32* arr, const u32 n, const i32 k) {
-    if (n == 0) return -1;
+i32 KthIndexInt(const i32* arr, const i32 n, const i32 k) {
+    if (n <= 0) return -1;
 
     // Transform k (median/negative handling)
     const i32 K = _wrap_kth_index(k, n);
@@ -239,8 +239,8 @@ i32 KthIndexInt(const i32* arr, const u32 n, const i32 k) {
  *   k=0 → Returns 0 (index of 5.5, the median)
  *   k=2 → Returns 1 (index of 2.2, the 2nd smallest)
  */
-i32 KthIndexDouble(const f64* arr, const u32 n, const i32 k) {
-    if (n == 0) return -1;
+i32 KthIndexDouble(const f64* arr, const i32 n, const i32 k) {
+    if (n <= 0) return -1;
 
     // Transform k (median/negative handling)
     const i32 K = _wrap_kth_index(k, n);
@@ -382,8 +382,8 @@ typedef i32 (*CompareWithContext)(void*, const i32, const i32);
  *   KthIndexGeneric(colors, 5, 0, sizeof(Color), compare_brightness);
  * @endcode
  */
-i32 KthIndexGeneric(const void* arr, const u32 n, const i32 k, const size_t elementSize, const compareFunc compare) {
-    if (n == 0) return -1;
+i32 KthIndexGeneric(const void* arr, const i32 n, const i32 k, const size_t elementSize, const compareFunc compare) {
+    if (n <= 0) return -1;
 
     // Transform k (median/negative handling)
     const i32 K = _wrap_kth_index(k, n);
@@ -516,8 +516,8 @@ i32 KthIndexGeneric(const void* arr, const u32 n, const i32 k, const size_t elem
 *       5, 0, colors, compare_brightness
 *   );
 */
-i32 KthIndexContext(const u32 n, const i32 k, void* context, const CompareWithContext compare) {
-    if (n == 0) return -1;
+i32 KthIndexContext(const i32 n, const i32 k, void* context, const CompareWithContext compare) {
+    if (n <= 0) return -1;
 
     // Transform k (median/negative handling)
     const i32 K = _wrap_kth_index(k, n);

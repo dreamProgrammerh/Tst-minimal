@@ -2,8 +2,6 @@
 
 #define MATH_PREFIX fmath_
 #define MATH_DEFINITION 1
-#include "ftime.h"
-
 #include "fmath.c"
 #include "kthindex.c"
 
@@ -25,8 +23,8 @@ int main() {
     const u32 sized = sizeof(arrd) / sizeof(arrd[0]);
 
     printf("med int: %d\n", arri[KthIndexInt((i32*)&arri, sizei, 0)]);
-    printf("big 2 double: %g\n", arrd[KthIndexDouble((f64*)&arrd, sized, 3)]);
-    printf("big 1 compare ctx: %d\n", arri[KthIndexGeneric((void*)&arri, sizei, 1, sizeof(arri[0]), cmp)]);
+    printf("big 2 double: %g\n", arrd[KthIndexDouble((f64*)&arrd, sized, -2)]);
+    printf("big 1 compare gen: %d\n", arri[KthIndexGeneric((void*)&arri, sizei, -1, sizeof(arri[0]), cmp)]);
     printf("small 4 compare ctx: %g\n", arrd[KthIndexContext(sized, 4, (void*)&arrd, cmp2)]);
     
     printf("init: %lld\n", _initTime);
