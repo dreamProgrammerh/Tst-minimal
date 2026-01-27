@@ -1,19 +1,19 @@
 /// Fast Math Library - High-performance mathematical functions for Dart
 /// ====================================================================
-/// 
+///
 /// Provides both accurate IEEE 754-compliant functions and fast approximate
 /// versions optimized for real-time applications.
-/// 
+///
 /// Author: dreamProgrammer
 /// Version: 1.0.0
-/// 
+///
 /// Quick Start:
 /// ------------
 /// 1. Call load_fmathLib() once at application startup
 /// 2. Use standard functions (sin, cos) for accuracy
 /// 3. Use rough functions (rsin, rcos) for speed
 /// 4. Call seed() and random() for random numbers
-/// 
+///
 
 import 'dart:ffi' as c;
 import 'dart:io';
@@ -21,11 +21,11 @@ import 'dart:typed_data';
 
 const _p = 'fmath_'; // prefix
 final String? _libraryPath =
-        Platform.isWindows ? "lib/fastMath.dll"
-      : Platform.isMacOS ? "lib/fastMath.dylib"
-      : Platform.isLinux ? "lib/fastMath.so"
+        Platform.isWindows  ? "lib/fastMath.dll"
+      : Platform.isMacOS    ? "lib/fastMath.dylib"
+      : Platform.isLinux    ? "lib/fastMath.so"
       : null;
-      
+
 final _malloc = c.DynamicLibrary.process().lookupFunction<
   c.Pointer<c.Void> Function(c.IntPtr size),
   c.Pointer<c.Void> Function(int size)
@@ -58,47 +58,37 @@ class MissingLibraryError extends Error {
   String toString() => "Missing Library '$name'${path == null ? '' : ' at "$path"'}";
 }
 
-abstract class ByteRepresentation<T> {
-  /// Size of this type in bytes when serialized
-  int get sizeInBytes;
-  
-  /// Convert to bytes
-  Uint8List toBytes();
-  
-  /// Create from bytes
-  T fromBytes(Uint8List bytes);
-}
+class _KthContext<T> {
+  final int key;
+  final List<dynamic> list;
+  late final int Function(dynamic, dynamic) compare;
 
-/// Convert bytes at pointer to object
-T _bytesToObject<T>(c.Pointer<c.Void> ptr, int size) {
-  // Read bytes from pointer
-  final byteList = ptr.cast<c.Uint8>().asTypedList(size);
-  
-  // Convert bytes to object
-  return _fromBytes<T>(byteList);
-}
-
-/// Convert bytes to object based on type
-T _fromBytes<T>(Uint8List bytes) {
-  final byteData = ByteData.sublistView(bytes);
-  
-  if (T == int) {
-    if (bytes.length == 4) {
-      return byteData.getInt32(0, Endian.host) as T;
-    } else if (bytes.length == 8) {
-      return byteData.getInt64(0, Endian.host) as T;
-    }
-  } 
-  else if (T == double) {
-    if (bytes.length == 4) {
-      return byteData.getFloat32(0, Endian.host) as T;
-    } else if (bytes.length == 8) {
-      return byteData.getFloat64(0, Endian.host) as T;
-    }
+  _KthContext(List<T> list, int Function(T, T) compare)
+    : key = _counter++, list = list {
+    this.compare = (a, b) => compare(a as T, b as T);
+    _contexts[key] = this;
   }
-  
-  // For custom types, you'd need specific deserialization
-  throw UnsupportedError('Cannot convert bytes to type $T');
+
+  void delete() => _contexts.remove(key);
+
+
+  static int _counter = 1;
+  static final _contexts = <int, _KthContext>{};
+
+  static int compareWarpper(c.Pointer<c.Void> ptr, int a, int b) {
+    final key = ptr.address.toInt();
+    final ctx = _contexts[key];
+
+    // should never happen
+    if (ctx == null) return 0;
+
+    return ctx.compare(ctx.list[a], ctx.list[b]);
+  }
+
+
+  static final comparePtr = c.Pointer.fromFunction<_CompareFuncNative>(
+    _KthContext.compareWarpper, 0
+  );
 }
 
 /// ====================================================
@@ -108,53 +98,53 @@ T _fromBytes<T>(Uint8List bytes) {
 late final c.DynamicLibrary _lib;
 
 /// Loads and initializes the native Fast Math library.
-/// 
-/// This function must be called once before using any math functions 
-/// that depend on native implementations (particularly time functions 
+///
+/// This function must be called once before using any math functions
+/// that depend on native implementations (particularly time functions
 /// and advanced mathematical operations).
-/// 
+///
 /// ## Platform Support
 /// - **Windows**: Requires `fastMath.dll`
 /// - **macOS**: Requires `fastMath.dylib`
 /// - **Linux**: Requires `fastMath.so`
 /// - **iOS/Android**: Not supported yet
-/// 
+///
 /// ## Functionality Loaded
 /// After calling this function, the following become available:
 /// 1. High-performance native implementations of mathematical functions
 /// 2. Precise time measurement functions (`now`, `uptime`, `clock`)
 /// 3. System-dependent random number generation
 /// 4. Fast approximate (r-prefix) functions with hardware acceleration
-/// 
+///
 /// ## Usage Example
 /// ```dart
 /// void main() {
 ///   // Initialize the math library
 ///   load_fmathLib();
-///   
+///
 ///   // Now all math functions are available
 ///   final startTime = now();  // microseconds since epoch
 ///   final result = rsin(1.0); // fast sine approximation
 ///   final endTime = now();
-///   
+///
 ///   print('Computation took ${endTime - startTime} us');
 /// }
 /// ```
-/// 
+///
 /// ## Error Handling
 /// - Throws `UnsupportedOSError` if the current OS is not supported
 /// - Throws `MissingLibraryError` if the native library cannot be found
 /// - Throws `SymbolLookupError` if function bindings fail
-/// 
+///
 void load_fmathLib() {
   if (_libraryPath == null)
     throw UnsupportedOSError(Platform.operatingSystem.toString());
-  
+
   else if (! File(_libraryPath!).existsSync())
     throw MissingLibraryError("fastMath", _libraryPath);
-    
+
   _lib = c.DynamicLibrary.open(_libraryPath!);
-  
+
   _loadFunctions();
   _init();
   _loadVariables();
@@ -214,15 +204,15 @@ const int kthMedian = 0xFFFFFFFF;  // Use for kth median case
 // ====================================================
 
 /// The timestamp when the math library was initialized.
-/// 
+///
 /// This is set when `load_fmathLib()` is called and represents
 /// the system uptime in microseconds at initialization.
-/// 
+///
 /// Useful for:
 /// - Measuring time elapsed since library load
 /// - Creating time-based IDs that are unique to this program instance
 /// - Debugging timing-related issues
-/// 
+///
 /// Example:
 /// ```dart
 /// final timeSinceInit = uptime() - initTime;
@@ -231,15 +221,15 @@ const int kthMedian = 0xFFFFFFFF;  // Use for kth median case
 late final int initTime;
 
 /// The most recent seed value used to initialize the RNG.
-/// 
+///
 /// This tracks the last seed passed to the `seed()` function,
 /// or the auto-generated seed if `seed(0)` was called.
-/// 
+///
 /// Useful for:
 /// - Debugging random number issues
 /// - Saving and restoring RNG state in games
 /// - Verifying that seeding worked correctly
-/// 
+///
 /// Example:
 /// ```dart
 /// seed(42);
@@ -248,13 +238,13 @@ late final int initTime;
 late final int lastSeed;
 
 /// Current state of the random number generator.
-/// 
+///
 /// This is the internal state used by the PCG or similar RNG algorithm.
 /// Advanced users can read this for debugging or save/restore RNG state.
-/// 
+///
 /// ! **Warning**: Modifying this directly may break random number sequences.
 /// Use `seed()` function to properly reset the RNG state.
-/// 
+///
 /// Type: 64-bit unsigned integer (platform-dependent)
 /// Visibility: Package-private
 // ignore: unused_element
@@ -280,12 +270,12 @@ late final int Function() uptime;
 late final int Function() clock;
 
 /// Generates a random seed by combining multiple system entropy sources
-/// 
+///
 /// Uses current time, system uptime, process ID, and memory layout
 /// to create a unique seed suitable for random number generation.
-/// 
+///
 /// Returns: A 32-bit integer seed (0 to 4,294,967,295)
-/// 
+///
 /// Note: Passing seed=0 to seed() or noise() functions will
 /// automatically call this function internally.
 late final int Function() genseed;
@@ -453,7 +443,7 @@ late final double Function(double edge, double x) step;
 /// [n]: Non-negative integer (0 ≤ n ≤ 20)
 /// Returns: n! = n × (n-1) × ... × 1
 /// Case:  0 if n < 0
-/// Case: -1 if n > 20  
+/// Case: -1 if n > 20
 late final int Function(int n) factorial;
 
 /// Binomial coefficient "n choose k"
@@ -769,14 +759,19 @@ late final double Function(double x, double y) hypot;
 // KTH INDEX FUNCTIONS
 // ====================================================
 
-typedef KthCompareFuncNative = c.Int32 Function(c.Pointer<c.Void>, c.Pointer<c.Void>);
-typedef KthCompareFuncDart = int Function(c.Pointer<c.Void>, c.Pointer<c.Void>);
+// Compare function signature
+typedef _CompareFuncNative = c.Int32 Function(
+  c.Pointer<c.Void> context,
+  c.Uint32 a,
+  c.Uint32 b,
+);
 
-late final int Function<T>(List<T> arr, int k, int Function(T a, T b)) kthIndex;
 
-late final int Function(List<int> arr, int k) kthIndexInt;
+late final int Function<T>(List<T> arr, int k, int Function(T a, T b)) kth;
 
-late final int Function(List<double> arr, int k) kthIndexDouble;
+late final int Function(List<int> arr, int k) kthInt;
+
+late final int Function(List<double> arr, int k) kthDouble;
 
 void _loadVariables() {
   initTime      = _lib.lookup<c.Uint64>('_initTime').value;
@@ -789,65 +784,65 @@ void _loadFunctions() {
     c.Void Function(),
     void Function()
     >('${_p}init');
-    
+
   now = _lib.lookupFunction<
     c.Uint64 Function(),
     int Function()
     >('${_p}now');
-  
+
   uptime = _lib.lookupFunction<
     c.Uint64 Function(),
     int Function()
     >('${_p}uptime');
-    
+
   clock = _lib.lookupFunction<
     c.Uint64 Function(),
     int Function()
     >('${_p}clock');
-    
+
   genseed = _lib.lookupFunction<
     c.Uint64 Function(),
     int Function()
     >('${_p}genseed');
-    
+
   seed = _lib.lookupFunction<
     c.Void Function(c.Uint64 seed),
     void Function(int seed)
     >('${_p}seed');
-    
+
   random = _lib.lookupFunction<
     c.Double Function(),
     double Function()
     >('${_p}random');
-    
+
   randomInt = _lib.lookupFunction<
     c.Int32 Function(c.Int32 max),
     int Function(int max)
     >('${_p}randomInt');
-    
+
   randomBool = _lib.lookupFunction<
     c.Bool Function(),
     bool Function()
     >('${_p}randomBool');
-    
+
   randomByte = _lib.lookupFunction<
     c.Uint8 Function(),
     int Function()
     >('${_p}randomByte');
-  
+
   final _randomBytesC = _lib.lookupFunction<
     c.Void Function(c.Pointer<c.Uint8> buffer, c.Uint64 size),
     void Function(c.Pointer<c.Uint8> buffer, int size)
     >('${_p}randomBytes', isLeaf: true);
-  
+
   randomBytes = (size) {
     // Allocate native memory using C lib malloc
     final pointer = _malloc(size).cast<c.Uint8>();
-    
+
     try {
       // Call C function
       _randomBytesC(pointer, size);
-      
+
       // Copy bytes to Dart list
       return pointer.asTypedList(size);
     } finally {
@@ -855,379 +850,380 @@ void _loadFunctions() {
       _free(pointer.cast<c.Void>());
     }
   };
-    
+
   min = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double b),
     double Function(double a, double b)
     >('${_p}min');
-    
+
   max = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double),
     double Function(double a, double b)
     >('${_p}max');
-    
+
   med = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double b, c.Double c),
     double Function(double a, double b, double c)
     >('${_p}med');
-    
+
   clamp = _lib.lookupFunction<
     c.Double Function(c.Double value, c.Double min, c.Double max),
     double Function(double value, double min, double max)
     >('${_p}clamp');
-    
+
   abs = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}abs');
-    
+
   sign = _lib.lookupFunction<
     c.Int32 Function(c.Double x),
     int Function(double x)
     >('${_p}sign');
-    
+
   floor = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}floor');
-    
+
   ceil = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}ceil');
-    
+
   trunc = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}trunc');
-    
+
   round = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}round');
-    
+
   snap = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}snap');
-    
+
   snapOffset = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y, c.Double offset),
     double Function(double x, double y, double offset)
     >('${_p}snapOffset');
-    
+
   lerp = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double b, c.Double t),
     double Function(double a, double b, double t)
     >('${_p}lerp');
-    
+
   mod = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double b),
     double Function(double a, double b)
     >('${_p}mod');
-    
+
   remainder = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double b),
     double Function(double a, double b)
     >('${_p}remainder');
-    
+
   wrap = _lib.lookupFunction<
     c.Double Function(c.Double a, c.Double b),
     double Function(double a, double b)
     >('${_p}wrap');
-    
+
   wrapRange = _lib.lookupFunction<
     c.Double Function(c.Double value, c.Double min, c.Double max),
     double Function(double value, double min, double max)
     >('${_p}wrapRange');
-    
+
   step = _lib.lookupFunction<
     c.Double Function(c.Double edge, c.Double x),
     double Function(double edge, double x)
     >('${_p}step');
-    
+
   factorial = _lib.lookupFunction<
     c.Uint64 Function(c.Int32 n),
     int Function(int n)
     >('${_p}factorial');
-    
+
   binomial = _lib.lookupFunction<
     c.Uint64 Function(c.Int32 n, c.Int32 k),
     int Function(int n, int k)
     >('${_p}binomial');
-    
+
   toRadians = _lib.lookupFunction<
     c.Double Function(c.Double degrees),
     double Function(double degrees)
     >('${_p}toRadians');
-    
+
   toDegrees = _lib.lookupFunction<
     c.Double Function(c.Double radians),
     double Function(double radians)
     >('${_p}toDegrees');
-    
+
   length = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}length');
-    
+
   lengthSq = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}lengthSq');
-    
+
   dot = _lib.lookupFunction<
     c.Double Function(c.Double x1, c.Double y1, c.Double x2, c.Double y2),
     double Function(double x1, double y1, double x2, double y2)
     >('${_p}dot');
-    
+
   distance = _lib.lookupFunction<
     c.Double Function(c.Double x1, c.Double y1, c.Double x2, c.Double y2),
     double Function(double x1, double y1, double x2, double y2)
     >('${_p}distance');
-    
+
   distanceSq = _lib.lookupFunction<
     c.Double Function(c.Double x1, c.Double y1, c.Double x2, c.Double y2),
     double Function(double x1, double y1, double x2, double y2)
     >('${_p}distanceSq');
-    
+
   intPow = _lib.lookupFunction<
     c.Double Function(c.Double base, c.Int32 exponent),
     double Function(double base, int exponent)
     >('${_p}intPow');
-    
+
   remap = _lib.lookupFunction<
     c.Double Function(c.Double value, c.Double inMin, c.Double inMax, c.Double outMin, c.Double outMax),
     double Function(double value, double inMin, double inMax, double outMin, double outMax)
     >('${_p}remap');
-    
+
   unit = _lib.lookupFunction<
     c.Double Function(c.Double value, c.Double min, c.Double max),
     double Function(double value, double min, double max)
     >('${_p}unit');
-    
+
   expand = _lib.lookupFunction<
     c.Double Function(c.Double value, c.Double min, c.Double max),
     double Function(double value, double min, double max)
     >('${_p}expand');
-    
+
   smoothstep = _lib.lookupFunction<
     c.Double Function(c.Double t),
     double Function(double t)
     >('${_p}smoothstep');
-    
+
   smootherstep = _lib.lookupFunction<
     c.Double Function(c.Double t),
     double Function(double t)
     >('${_p}smootherstep');
-    
+
   easeIn = _lib.lookupFunction<
     c.Double Function(c.Double t),
     double Function(double t)
     >('${_p}easeIn');
-    
+
   easeOut = _lib.lookupFunction<
     c.Double Function(c.Double t),
     double Function(double t)
     >('${_p}easeOut');
-    
+
   easeInOut = _lib.lookupFunction<
     c.Double Function(c.Double t),
     double Function(double t)
     >('${_p}easeInOut');
-    
+
   cubicBezier = _lib.lookupFunction<
     c.Double Function(c.Double p0, c.Double p1, c.Double p2, c.Double p3, c.Double t),
     double Function(double p0, double p1, double p2, double p3, double t)
     >('${_p}cubicBezier');
-    
+
   noise = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y, c.Uint64 seed),
     double Function(double x, double y, int seed)
     >('${_p}noise');
-    
+
   rexp = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rexp');
-    
+
   rlog = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rlog');
-    
+
   rlog10 = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rlog10');
-    
+
   risqrt = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}risqrt');
-    
+
   rsqrt = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rsqrt');
-    
+
   rsin = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rsin');
-    
+
   rcos = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rcos');
-    
+
   rtan = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rtan');
-    
+
   rasin = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}rasin');
-    
+
   racos = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}racos');
-    
+
   ratan = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}ratan');
-    
+
   ratan2 = _lib.lookupFunction<
     c.Double Function(c.Double y, c.Double x),
     double Function(double y, double x)
     >('${_p}ratan2');
-    
+
   rpow = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double exponent),
     double Function(double x, double exponent)
     >('${_p}rpow');
-    
+
   rhypot = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}rhypot');
-    
+
   sin = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}sin');
-    
+
   cos = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}cos');
-    
+
   tan = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}tan');
-    
+
   asin = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}asin');
-    
+
   acos = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}acos');
-    
+
   atan = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}atan');
-    
+
   atan2 = _lib.lookupFunction<
     c.Double Function(c.Double y, c.Double x),
     double Function(double y, double x)
     >('${_p}atan2');
-    
+
   exp = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}exp');
-    
+
   log = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}log');
-    
+
   log10 = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}log10');
-    
+
   sqrt = _lib.lookupFunction<
     c.Double Function(c.Double x),
     double Function(double x)
     >('${_p}sqrt');
-    
+
   pow = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}pow');
-    
+
   hypot = _lib.lookupFunction<
     c.Double Function(c.Double x, c.Double y),
     double Function(double x, double y)
     >('${_p}hypot');
-    
-  
+
+
   final _kth = _lib.lookupFunction<
-    c.Int32 Function(c.Pointer<c.Void> arr, c.Uint32 n, c.Int32 k,
-      c.Size elementSize, c.Pointer<c.NativeFunction<KthCompareFuncNative>> compare),
-    int Function(c.Pointer<c.Void> arr, int n, int k,
-      int elementSize, c.Pointer<c.NativeFunction<KthCompareFuncNative>> compare)
-  >('KthIndexGeneric');
-  
+    c.Int32 Function(c.Uint32 n, c.Int32 k, c.Pointer<c.Void> context,
+      c.Pointer<c.NativeFunction<_CompareFuncNative>> compare),
+    int Function(int n, int k, c.Pointer<c.Void> context,
+      c.Pointer<c.NativeFunction<_CompareFuncNative>> compare)
+  >('KthIndexContext');
+
   final _kthInt = _lib.lookupFunction<
     c.Int32 Function(c.Pointer<c.Int32> arr, c.Uint32 n, c.Int32 k),
     int Function(c.Pointer<c.Int32> arr, int n, int k)
   >('KthIndexInt');
-  
+
   final _kthDouble = _lib.lookupFunction<
     c.Int32 Function(c.Pointer<c.Double> arr, c.Uint32 n, c.Int32 k),
     int Function(c.Pointer<c.Double> arr, int n, int k)
   >('KthIndexDouble');
-  
-  kthIndex = <T>(list, k, compare) {
+
+  kth = <T>(list, k, compare) {
     if (list.isEmpty) return -1;
-    
-    // i spent 8 hour's trying to write this function
-    // yet nothing worked for me,
-    // i will try to change the c code
-    
-    return -1;
+
+    final ctx = _KthContext<T>(list, compare);
+    final ptr = c.Pointer<c.Void>.fromAddress(ctx.key);
+
+    final res = _kth(list.length, k, ptr, _KthContext.comparePtr);
+    ctx.delete();
+    return res;
   };
-  
-  kthIndexInt = (list, k) {
+
+  kthInt = (list, k) {
     if (list.isEmpty) return -1;
-    
-    final ptr = _malloc(list.length).cast<c.Int32>();
+
+    final ptr = _malloc(list.length * c.sizeOf<c.Int32>()).cast<c.Int32>();
     final nativeList = ptr.asTypedList(list.length);
     nativeList.setAll(0, list);
-    
+
     final result = _kthInt(ptr, list.length, k);
     _free(ptr.cast<c.Void>());
     return result;
   };
-  
-  kthIndexDouble = (list, k) {
+
+  kthDouble = (list, k) {
     if (list.isEmpty) return -1;
-    
-    final ptr = _malloc(list.length).cast<c.Double>();
+
+    final ptr = _malloc(list.length * c.sizeOf<c.Double>()).cast<c.Double>();
     final nativeList = ptr.asTypedList(list.length);
     nativeList.setAll(0, list);
-    
+
     final result = _kthDouble(ptr, list.length, k);
     _free(ptr.cast<c.Void>());
     return result;
