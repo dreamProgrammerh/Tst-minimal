@@ -78,11 +78,30 @@ import 'dart:io';
 import 'dart:typed_data';
 
 const _p = 'fmath_'; // prefix
-final String? _libraryPath =
-        Platform.isWindows  ? "lib/fastMath.dll"
-      : Platform.isMacOS    ? "lib/fastMath.dylib"
-      : Platform.isLinux    ? "lib/fastMath.so"
-      : null;
+      
+String? get _libraryPath {
+  if (Platform.isWindows) {
+    return "librarys/windows/x64/fmath.dll";
+  }
+  
+  if (Platform.isMacOS) {
+    return null;
+  }
+    
+  if (Platform.isLinux) {
+    return null;
+  }
+  
+  if (Platform.isAndroid) {
+    return null;
+  }
+  
+  if (Platform.isIOS) {
+    return null;
+  }
+    
+  return null;
+}
 
 final _malloc = c.DynamicLibrary.process().lookupFunction<
   c.Pointer<c.Void> Function(c.IntPtr size),

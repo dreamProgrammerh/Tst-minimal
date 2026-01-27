@@ -40,6 +40,16 @@
 #include <stdlib.h>
 #include "types.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+    #include <malloc.h>
+    #define salloc _malloca
+    #define sfree _freea
+#else 
+    void* alloca(unsigned long long);
+    #define salloc alloca
+    #define sfree
+#endif
+
 /** Memory allocation threshold for stack vs heap */
 #define STACK_MAX_SIZE 100000U // 100K
 
@@ -164,10 +174,10 @@ i32 KthIndexInt(const i32* arr, const i32 n, const i32 k) {
 
     i32* indices;
     if (large)
-        indices = malloc(n * sizeof(i32));
+        indices = (i32*)malloc(n * sizeof(i32));
 
     else
-        indices = alloca(n * sizeof(i32));
+        indices = (i32*)salloc(n * sizeof(i32));
 
     if (!indices) return -1;
 
@@ -202,6 +212,10 @@ i32 KthIndexInt(const i32* arr, const i32 n, const i32 k) {
         if (K == storeIndex) {
             const i32 result = indices[K];
             if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+            else sfree(indices);
+#endif
+            // At the end of function, before returning:
             return result;
         }
 
@@ -216,6 +230,10 @@ i32 KthIndexInt(const i32* arr, const i32 n, const i32 k) {
     
     const i32 result = indices[left];
     if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+    else sfree(indices);
+#endif
+    // At the end of function, before returning:
     return result;
 }
 
@@ -275,7 +293,7 @@ i32 KthIndexDouble(const f64* arr, const i32 n, const i32 k) {
         indices = malloc(n * sizeof(i32));
 
     else
-        indices = alloca(n * sizeof(i32));
+        indices = salloc(n * sizeof(i32));
 
     if (!indices) return -1;
     
@@ -326,6 +344,10 @@ i32 KthIndexDouble(const f64* arr, const i32 n, const i32 k) {
         if (K == storeIndex) {
             const int result = indices[K];
             if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+            else sfree(indices);
+#endif
+            // At the end of function, before returning:
             return result;
 
         }
@@ -341,6 +363,10 @@ i32 KthIndexDouble(const f64* arr, const i32 n, const i32 k) {
     
     const int result = indices[left];
     if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+    else sfree(indices);
+#endif
+    // At the end of function, before returning:
     return result;
 }
 
@@ -396,8 +422,8 @@ i32 KthIndexGeneric(const void* arr, const i32 n, const i32 k, const size_t elem
         // Find minimum element by comparing all with first
         i32 minIdx = 0;
         for (u32 i = 1; i < n; i++) {
-            const void* p1 = arr + i * elementSize;
-            const void* p2 = arr + minIdx * elementSize;
+            const void* p1 = (char*)arr + i * elementSize;
+            const void* p2 = (char*)arr + minIdx * elementSize;
             if (compare(p1, p2) < 0) minIdx = i;
         }
         return minIdx;
@@ -407,8 +433,8 @@ i32 KthIndexGeneric(const void* arr, const i32 n, const i32 k, const size_t elem
         // Find maximum element by comparing all with first
         i32 maxIdx = 0;
         for (u32 i = 1; i < n; i++) {
-            const void* p1 = arr + i * elementSize;
-            const void* p2 = arr + maxIdx * elementSize;
+            const void* p1 = (char*)arr + i * elementSize;
+            const void* p2 = (char*)arr + maxIdx * elementSize;
             if (compare(p1, p2) > 0) maxIdx = i;
         }
         return maxIdx;
@@ -423,7 +449,7 @@ i32 KthIndexGeneric(const void* arr, const i32 n, const i32 k, const size_t elem
         indices = malloc(n * sizeof(i32));
 
     else
-        indices = alloca(n * sizeof(i32));
+        indices = salloc(n * sizeof(i32));
 
     if (!indices) return -1;
 
@@ -466,6 +492,10 @@ i32 KthIndexGeneric(const void* arr, const i32 n, const i32 k, const size_t elem
         if (K == storeIndex) {
             const i32 result = indices[K];
             if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+            else sfree(indices);
+#endif
+            // At the end of function, before returning:
             return result;
         }
 
@@ -480,6 +510,10 @@ i32 KthIndexGeneric(const void* arr, const i32 n, const i32 k, const size_t elem
 
     const i32 result = indices[left];
     if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+    else sfree(indices);
+#endif
+    // At the end of function, before returning:
     return result;
 }
 
@@ -552,7 +586,7 @@ i32 KthIndexContext(const i32 n, const i32 k, void* context, const CompareWithCo
         indices = malloc(n * sizeof(i32));
     
     else 
-        indices = alloca(n * sizeof(i32));
+        indices = salloc(n * sizeof(i32));
     
     if (!indices) return -1;
     
@@ -595,6 +629,10 @@ i32 KthIndexContext(const i32 n, const i32 k, void* context, const CompareWithCo
         if (K == storeIndex) {
             const i32 result = indices[K];
             if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+            else sfree(indices);
+#endif
+            // At the end of function, before returning:
             return result;
         }
         
@@ -607,5 +645,9 @@ i32 KthIndexContext(const i32 n, const i32 k, void* context, const CompareWithCo
     
     const i32 result = indices[left];
     if (large) free(indices);
+#if defined(_WIN32) || defined(_WIN64)
+    else sfree(indices);
+#endif
+    // At the end of function, before returning:
     return result;
 }

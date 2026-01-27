@@ -44,11 +44,11 @@ int main() {
 }
 
 // Windows
-// gcc -DMATH_PREFIX=fmath_ -DMATH_DEFINITION=1 -o fastMath.dll -shared -O3 fmath.c kthindex.c
+// gcc -DMATH_PREFIX=fmath_ -DMATH_DEFINITION=1 -o fmath.dll -shared -O3 fmath.c kthindex.c
 
 // Linux/macOS
-// gcc -DMATH_PREFIX=fmath_ -DMATH_DEFINITION=1 -o fastMath.so -shared -O3 -fPIC fmath.c kthindex.c
+// gcc -DMATH_PREFIX=fmath_ -DMATH_DEFINITION=1 -o fmath.so -shared -O3 -fPIC fmath.c kthindex.c
 
 // macOS (dynamic library)
-// gcc -DMATH_PREFIX=fmath_ -DMATH_DEFINITION=1 -o fastMath.dylib -dynamiclib -O3 -fPIC fmath.c kthindex.c
+// gcc -DMATH_PREFIX=fmath_ -DMATH_DEFINITION=1 -o fmath.dylib -dynamiclib -O3 -fPIC fmath.c kthindex.c
  

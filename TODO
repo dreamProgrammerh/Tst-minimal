@@ -36,3 +36,14 @@ Examples:
 50`%        // this convert 50 to 0.5 float percentage
 50`%%       // this convert 50 to 0.05 float percentage
 ```
+
+## Build fMath lib for all platforms
+
+platforms:
+  - ✓ windows
+  - ✕ linux
+  - ✕ macos
+  - ✕ android
+  - ✕ ios
+
+build platforms and complete _libraryPath getter in `fmath.dart` file,
