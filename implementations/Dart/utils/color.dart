@@ -9,12 +9,14 @@ typedef CmykaColor = ({int c, int m, int y, int k, int a});
 enum ShadeAlignment { start, center, end }
 
 // Precomputed constants for speed
+const rgbDistance   = 441.6729559300637;    // sqrt(3 * 255^2)
+const rgbaDistance  = 510.0;                // sqrt(4 * 255^2)
+const rgbManhattan  = 765;                  // 255 * 3
+const radToDeg      = 57.29577951308232;    // 180 / pi
+const degToRad      = 0.017453292519943295; // pi / 180
+const _tau           = 6.283185307179586;    // 2 * pi
 const _inverseByte   = 0.003921568627450;    // 1 / 255
-const _rgbDistance   = 441.6729559300637;    // sqrt(3 * 255^2)
-const _rgbaDistance  = 510.0;                // sqrt(4 * 255^2)
-const _rgbManhattan  = 765;                  // 255 * 3
-const _radToDeg      = 57.29577951308232;    // 180 / pi
-const _degToRad      = 0.017453292519943295; // pi / 180
+const _hueToRad      = 1.0471975511966;      // pi / 3
 
 // Hue rotation matrix constants (luminance-preserving)
 const _lumR = 0.213;  // Red luminance weight
@@ -39,7 +41,7 @@ ArgbColor rgbo(int r, int g, int b, [double o = 1.00]) =>
 
 ArgbColor hsl(double h, double s, double l, [double o = 1.00]) {
   // HSL to RGB conversion formula
-  h = h % 360;
+  h = (h * radToDeg) % 360;
   s = s.clamp(0.0, 1.0);
   l = l.clamp(0.0, 1.0);
 
@@ -74,7 +76,7 @@ ArgbColor hsl(double h, double s, double l, [double o = 1.00]) {
 
 ArgbColor hsv(double h, double s, double v, [double o = 1.00]) {
   // HSV to RGB conversion (similar to HSL but different formula)
-  h = h % 360;
+  h = (h * radToDeg) % 360;
   s = s.clamp(0.0, 1.0);
   v = v.clamp(0.0, 1.0);
 
@@ -148,7 +150,7 @@ HsloColor toHslo(ArgbColor argb) {
   final min = math.min(rf, math.min(gf, bf));
   final delta = max - min;
   
-  // Calculate hue (0-360 degrees)
+  // Calculate hue (0-2π radians)
   double h = 0.0;
   if (delta != 0.0) {
     if (max == rf) {
@@ -158,8 +160,8 @@ HsloColor toHslo(ArgbColor argb) {
     } else {
       h = (rf - gf) / delta + 4.0;
     }
-    h *= 60.0;
-    if (h < 0.0) h += 360.0;
+    h *= _hueToRad;
+    if (h < 0.0) h += _tau;
   }
   
   // Calculate lightness and saturation
@@ -185,7 +187,7 @@ HsvoColor toHsvo(ArgbColor argb) {
   final min = math.min(rf, math.min(gf, bf));
   final delta = max - min;
   
-  // Calculate hue (0-360 degrees)
+  // Calculate hue (0-2π radians)
   double h = 0.0;
   if (delta != 0.0) {
     if (max == rf) {
@@ -195,8 +197,8 @@ HsvoColor toHsvo(ArgbColor argb) {
     } else {
       h = (rf - gf) / delta + 4.0;
     }
-    h *= 60.0;
-    if (h < 0.0) h += 360.0;
+    h *= _hueToRad;
+    if (h < 0.0) h += _tau;
   }
   
   // Calculate saturation and value
@@ -214,9 +216,9 @@ CmykaColor toCmyka(ArgbColor argb) {
   final g = (argb >> 8) & 0xFF;
   final b = argb & 0xFF;
   
-  final rf = r / 255.0;
-  final gf = g / 255.0;
-  final bf = b / 255.0;
+  final rf = r * _inverseByte;
+  final gf = g * _inverseByte;
+  final bf = b * _inverseByte;
   
   // Calculate black component (K)
   final black = 1.0 - math.max(rf, math.max(gf, bf));
@@ -298,34 +300,47 @@ ArgbColor? hexColor(String color) {
   if (hex.isEmpty) return null;
   
   // Expand shorthand formats to full 8-digit hex
-  if (hex.length == 1) {
-    // C → ffCCCCCC
-    hex = 'ff$hex$hex$hex$hex$hex$hex';
-  } else if (hex.length == 2) {
-    // CA → AAAAAAAA CCCCCCCC
-    final a = hex[0];
-    final c = hex[1];
-    hex = '$a$a$c$c$c$c$c$c';
-  } else if (hex.length == 3) {
-    // RGB → ffRRGGBB
-    final r = hex[0];
-    final g = hex[1];
-    final b = hex[2];
-    hex = 'ff$r$r$g$g$b$b';
-  } else if (hex.length == 4) {
-    // RGBA → AARRGGBB
-    final a = hex[0];
-    final r = hex[1];
-    final g = hex[2];
-    final b = hex[3];
-    hex = '$a$a$r$r$g$g$b$b';
-  } else if (hex.length == 6) {
-    // RRGGBB → ffRRGGBB
-    hex = 'ff$hex';
-  } else if (hex.length == 8) {
-    // RRGGBBAA → already correct format
-  } else {
-    return null; // Invalid length
+  switch (hex.length) {
+    case 1:
+      // C → ffCCCCCC
+      hex = 'ff$hex$hex$hex$hex$hex$hex';
+      break;
+    
+    case 2:
+      // CA → AAAAAAAA CCCCCCCC
+      final a = hex[0];
+      final c = hex[1];
+      hex = '$a$a$c$c$c$c$c$c';
+      break;
+    
+    case 3:
+      // RGB → ffRRGGBB
+      final r = hex[0];
+      final g = hex[1];
+      final b = hex[2];
+      hex = 'ff$r$r$g$g$b$b';
+      break;
+    
+    case 4:
+      // RGBA → AARRGGBB
+      final a = hex[0];
+      final r = hex[1];
+      final g = hex[2];
+      final b = hex[3];
+      hex = '$a$a$r$r$g$g$b$b';
+      break;
+    
+    case 6:
+      // RRGGBB → ffRRGGBB
+      hex = 'ff$hex';
+      break;
+    
+    case 8:
+      // RRGGBBAA → already correct format
+      break;
+    
+    default:
+      return null; // Invalid length
   }
   
   // Parse hex string to integer
@@ -380,8 +395,11 @@ double getHue(ArgbColor c) {
     hue = (rf - gf) / delta + 4.0;
   }
   
-  hue *= 60.0; // Convert to degrees
-  return hue < 0.0 ? hue + 360.0 : hue; // Ensure 0-360 range
+  // Directly convert the 0-6 range to 0-2π radians
+  hue *= _hueToRad;
+  
+  // Normalize to [0, 2π)
+  return hue < 0.0 ? hue + _tau : hue;
 }
 
 @pragma('vm:prefer-inline')
@@ -449,9 +467,9 @@ int getC(ArgbColor c) {
   final g = getG(c);
   final b = getB(c);
   
-  final rf = r / 255.0;
-  final gf = g / 255.0;
-  final bf = b / 255.0;
+  final rf = r * _inverseByte;
+  final gf = g * _inverseByte;
+  final bf = b * _inverseByte;
   
   final max = math.max(rf, math.max(gf, bf));
   final black = 1.0 - max;
@@ -468,9 +486,9 @@ int getM(ArgbColor c) {
   final g = getG(c);
   final b = getB(c);
   
-  final rf = r / 255.0;
-  final gf = g / 255.0;
-  final bf = b / 255.0;
+  final rf = r * _inverseByte;
+  final gf = g * _inverseByte;
+  final bf = b * _inverseByte;
   
   final max = math.max(rf, math.max(gf, bf));
   final black = 1.0 - max;
@@ -487,9 +505,9 @@ int getY(ArgbColor c) {
   final g = getG(c);
   final b = getB(c);
   
-  final rf = r / 255.0;
-  final gf = g / 255.0;
-  final bf = b / 255.0;
+  final rf = r * _inverseByte;
+  final gf = g * _inverseByte;
+  final bf = b * _inverseByte;
   
   final max = math.max(rf, math.max(gf, bf));
   final black = 1.0 - max;
@@ -506,9 +524,9 @@ int getK(ArgbColor c) {
   final g = getG(c);
   final b = getB(c);
   
-  final rf = r / 255.0;
-  final gf = g / 255.0;
-  final bf = b / 255.0;
+  final rf = r * _inverseByte;
+  final gf = g * _inverseByte;
+  final bf = b * _inverseByte;
   
   final max = math.max(rf, math.max(gf, bf));
   final black = 1.0 - max;
@@ -520,13 +538,8 @@ int getK(ArgbColor c) {
 
 @pragma('vm:prefer-inline')
 double getTemperature(ArgbColor c) {
-  // Simple temperature: -100 (cool/blue) to +100 (warm/red)
-  return ((getR(c) - getB(c)) * _inverseByte * 100.0);
-}
-
-@pragma('vm:prefer-inline')
-double getPerceptualTemperature(ArgbColor c) {
   // Perceptual temperature with green contribution
+  // temperature: -100 (cool/blue) to +100 (warm/red)
   final r = getR(c);
   final g = getG(c);
   final b = getB(c);
@@ -538,9 +551,9 @@ double getPerceptualTemperature(ArgbColor c) {
 @pragma('vm:prefer-inline')
 double getLuminance(ArgbColor c) {
   // WCAG 2.0 relative luminance formula for contrast ratio
-  final r = getR(c) / 255.0;
-  final g = getG(c) / 255.0;
-  final b = getB(c) / 255.0;
+  final r = getR(c) * _inverseByte;
+  final g = getG(c) * _inverseByte;
+  final b = getB(c) * _inverseByte;
   
   // Gamma correction for sRGB
   final rf = r <= 0.03928 ? r / 12.92 : math.pow((r + 0.055) / 1.055, 2.4).toDouble();
@@ -576,7 +589,7 @@ double distance(ArgbColor c1, ArgbColor c2) {
 }
 
 @pragma('vm:prefer-inline')
-double difference(ArgbColor c1, ArgbColor c2) => distance(c1, c2) / _rgbDistance; // Normalized 0-1
+double difference(ArgbColor c1, ArgbColor c2) => distance(c1, c2) / rgbDistance; // Normalized 0-1
 
 // Color classification
 
@@ -806,7 +819,7 @@ ArgbColor invert(ArgbColor color) {
 }
 
 @pragma('vm:prefer-inline')
-ArgbColor complement(ArgbColor color) => shiftHue(color, 180.0); // Complementary color
+ArgbColor complement(ArgbColor color) => shiftHue(color, math.pi); // Complementary color
 
 // Color blending and mixing
 
@@ -875,18 +888,18 @@ ArgbColor mixer(List<ArgbColor> colors, [List<double>? weights]) {
 // Hue manipulation
 
 @pragma('vm:prefer-inline')
-ArgbColor hue(ArgbColor color, double hueDegrees) {
-  // Set absolute hue (0-360 degrees) - uses optimized hue rotation
-  return shiftHue(color, hueDegrees - getHue(color));
+ArgbColor hue(ArgbColor color, double angle) {
+  // Set absolute hue (0-2π radians) - uses optimized hue rotation
+  return shiftHue(color, angle - getHue(color));
 }
 
 @pragma('vm:prefer-inline')
-ArgbColor hueFast(ArgbColor color, double hueDegrees) {
+ArgbColor hueFast(ArgbColor color, double angle) {
   // Fast hue rotation using precomputed matrices (30° increments)
-  hueDegrees = hueDegrees % 360;
-  if (hueDegrees < 0) hueDegrees += 360;
+  const multiplier = 1 / (_tau / 12);
+  angle = angle < 0 ? angle + _tau : angle;
   
-  final index = ((hueDegrees / 30.0).round() % 12);
+  final index = ((angle * multiplier).round() % 12);
   final m = _hueMatrices[index];
   
   final a = color & 0xFF000000;
@@ -921,9 +934,9 @@ const _hueMatrices = [
 ];
 
 @pragma('vm:prefer-inline')
-ArgbColor shiftHue(ArgbColor color, double degrees) {
+ArgbColor shiftHue(ArgbColor color, double angle) {
   // Rotate hue while preserving luminance
-  final rad = (degrees % 360.0) * _degToRad;
+  final rad = angle;
   final cosA = math.cos(rad);
   final sinA = math.sin(rad);
   
@@ -1041,7 +1054,7 @@ ArgbColor pastel(ArgbColor color) {
 ArgbColor pressa(ArgbColor color) {
   // Premultiply alpha: multiply RGB by alpha/255
   final a = (color >> 24) & 0xFF;
-  final factor = a / 255.0;
+  final factor = a * _inverseByte;
   final r = (((color >> 16) & 0xFF) * factor).round();
   final g = (((color >> 8) & 0xFF) * factor).round();
   final b = ((color & 0xFF) * factor).round();
@@ -1089,7 +1102,7 @@ ArgbColor glow(ArgbColor color, double intensity) {
 // Combined adjustments
 
 @pragma('vm:prefer-inline')
-ArgbColor adjustHSL(ArgbColor color, double hueDelta, double satFactor, double brightFactor) {
+ArgbColor adjustHSL(ArgbColor color, double hueAngle, double satFactor, double brightFactor) {
   // Combined HSL adjustment in single operation
   final a = color & 0xFF000000;
   int r = (color >> 16) & 0xFF;
@@ -1114,8 +1127,8 @@ ArgbColor adjustHSL(ArgbColor color, double hueDelta, double satFactor, double b
   }
   
   // Hue rotation (matrix multiplication)
-  if (hueDelta != 0.0) {
-    final rad = (hueDelta % 360.0) * _degToRad;
+  if (hueAngle != 0.0) {
+    final rad = hueAngle % _tau;
     final cosA = math.cos(rad);
     final sinA = math.sin(rad);
     
