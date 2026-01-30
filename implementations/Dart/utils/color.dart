@@ -12,7 +12,7 @@ enum ShadeAlignment { start, center, end }
 const _inverseByte   = 0.003921568627450;    // 1 / 255
 const _rgbDistance   = 441.6729559300637;    // sqrt(3 * 255^2)
 const _rgbaDistance  = 510.0;                // sqrt(4 * 255^2)
-const _rgbManhattan  = 765;                  // 255 * 3 (FIXED: was 756)
+const _rgbManhattan  = 765;                  // 255 * 3
 const _radToDeg      = 57.29577951308232;    // 180 / pi
 const _degToRad      = 0.017453292519943295; // pi / 180
 
@@ -751,6 +751,51 @@ ArgbColor grayscale(ArgbColor color) {
 }
 
 @pragma('vm:prefer-inline')
+ArgbColor tint(ArgbColor color, int delta) {
+  // Move all channels by delta value towards white 
+  final a = color & 0xFF000000;
+  int r = (color >> 16) & 0xFF;
+  int g = (color >> 8) & 0xFF;
+  int b = color & 0xFF;
+  
+  delta = delta.abs();
+  r = (r + delta).clamp(0, 255);
+  g = (g + delta).clamp(0, 255);
+  b = (b + delta).clamp(0, 255);
+  return a | (r << 16) | (g << 8) | b;
+}
+
+@pragma('vm:prefer-inline')
+ArgbColor tone(ArgbColor color, int delta) { // Should this be named shade??
+  // Move all channels by delta value towards black 
+  final a = color & 0xFF000000;
+  int r = (color >> 16) & 0xFF;
+  int g = (color >> 8) & 0xFF;
+  int b = color & 0xFF;
+  
+  delta = delta.abs();
+  r = (r - delta).clamp(0, 255);
+  g = (g - delta).clamp(0, 255);
+  b = (b - delta).clamp(0, 255);
+  return a | (r << 16) | (g << 8) | b;
+}
+
+@pragma('vm:prefer-inline')
+ArgbColor shift(ArgbColor color, int position) {
+  // Move all channels avg to position
+  final a = color & 0xFF000000;
+  int r = (color >> 16) & 0xFF;
+  int g = (color >> 8) & 0xFF;
+  int b = color & 0xFF;
+  
+  final delta = ((r + g + b) / 3 - position.abs()).round();
+  r = (r + delta).clamp(0, 255);
+  g = (g + delta).clamp(0, 255);
+  b = (b + delta).clamp(0, 255);
+  return a | (r << 16) | (g << 8) | b;
+}
+
+@pragma('vm:prefer-inline')
 ArgbColor invert(ArgbColor color) {
   // Invert RGB components (photographic negative)
   final a = color & 0xFF000000;
@@ -761,7 +806,7 @@ ArgbColor invert(ArgbColor color) {
 }
 
 @pragma('vm:prefer-inline')
-ArgbColor opposite(ArgbColor color) => shiftHue(color, 180.0); // Complementary color
+ArgbColor complement(ArgbColor color) => shiftHue(color, 180.0); // Complementary color
 
 // Color blending and mixing
 
@@ -1101,7 +1146,7 @@ ArgbColor adjustHSL(ArgbColor color, double hueDelta, double satFactor, double b
 // Color Shading - Gradient and lerping colors
 // =====================================================
 
-List<ArgbColor> shade(
+List<ArgbColor> interpolate(
   ArgbColor seed,
   int length, {
   ShadeAlignment alignment = ShadeAlignment.start,
@@ -1140,7 +1185,7 @@ List<ArgbColor> shade(
   return result;
 }
 
-List<ArgbColor> shadeBetween(
+List<ArgbColor> interpolateBetween(
   ArgbColor c1,
   ArgbColor c2, {
   int length = 3,
@@ -1162,13 +1207,13 @@ List<ArgbColor> shadeBetween(
 // Terminal Coloring - ANSI Color and colored text
 // =====================================================
 
-String ansiColor(ArgbColor color, {int width = 1}) {
+String ansi(ArgbColor color, {int width = 1}) {
   return color == 0
     ? '\x1B[0m${'  ' * width}'
     : '\x1B[48;2;${getR(color)};${getG(color)};${getB(color)}m${'  ' * width}\x1B[0m';
 }
 
-String ansiShade(List<ArgbColor> colors, {int width = 1}) {
+String ansiInterpolate(List<ArgbColor> colors, {int width = 1}) {
   StringBuffer buf = StringBuffer();
 
   for (final color in colors) {
@@ -1179,20 +1224,6 @@ String ansiShade(List<ArgbColor> colors, {int width = 1}) {
   return buf.toString();
 }
 
-String ansiColoredText(String text, int color) {
+String ansiText(String text, int color) {
   return '\x1B[38;2;${getR(color)};${getG(color)};${getB(color)}m$text\x1B[0m';
-}
-
-// {{{{{{{{ Helpers }}}}}}}}
-
-num lerpNum(num a, num b, double t) {
-  return a + (b - a) * t;
-}
-
-double lerpDouble(double a, double b, double t) {
-  return a * (1.0 - t) + b * t;
-}
-
-int lerpInt(int a, int b, double t) {
-  return (a + (b - a) * t).round();
 }
