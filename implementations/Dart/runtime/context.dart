@@ -18,8 +18,11 @@ void registerFunction(String name, BuiltinFunction fn) {
   _builtinFunctions[name] = fn;
 }
 
+// TODO: imporve arg api to accept multi types
 void registerFuncWithArgs(String name, int argsCount, BuiltinFunction fn) {
   BuiltinFunction func = (args) {
+    if (argsCount == -1) return fn(args);
+    
     if (args.length != argsCount) {
       RuntimeState.error('$name ${
         args.length > 0

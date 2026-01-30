@@ -3,8 +3,11 @@ import 'dart:io';
 import 'error/reporter.dart';
 import 'utils/interpreter.dart';
 import 'utils/run.dart';
+import 'utils/fmath.dart' as fMath;
 
 void main() async {
+  fMath.loadFMathLib();
+  
   const filePath = "examples/theme.tstm";
   
   final out = StringBuffer();

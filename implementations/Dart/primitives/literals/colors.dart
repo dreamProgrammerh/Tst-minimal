@@ -1,22 +1,4 @@
-import '../runtime/values.dart';
-
-const List<(String, RuntimeValue)> specialLiterals = [
-  ('invalid', InvalidValue.instance),
-  ('true', IntValue(1)),
-  ('false', IntValue(0)),
-];
-
-const List<(String, RuntimeValue)> mathLiterals = [
-  ('HPI', FloatValue(1.5707963267948966)),
-  ('PI', FloatValue(3.1415926535897932)),
-  ('TAU', FloatValue(6.283185307179586)),
-  ('E', FloatValue(2.718281828459045)),
-  ('NaN', FloatValue(double.nan)),
-  ('Infinity', FloatValue(double.infinity)),
-];
-
-const List<(String, int)>
-colorLiterals = [
+const List<(String, int)> colorLiterals = [
   ('cherry', 0xFF680918),
   ('maroon', 0xFF800000),
   ('darkred', 0xFF8B0000),

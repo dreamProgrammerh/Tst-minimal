@@ -1,8 +1,7 @@
-import '../constants/const-literals.dart' as LITERALS;
+import '../primitives/literals/colors.dart';
 import '../runtime/results.dart';
 import '../runtime/values.dart';
-import 'colors.dart';
-import 'colors.dart' as Colors;
+import 'color.dart' as Colors;
 
 class _TableRow {
   String color;
@@ -32,11 +31,15 @@ double _round(double a, int b) {
 }
 
 String stringValue(RuntimeValue val) => val.stringify();
-String stringColor(RuntimeValue val) => Colors.ansiColor(val is IntValue ? val.value : 0);
+String stringColor(RuntimeValue val) => Colors.ansi(val is IntValue ? val.value : 0);
 String stringCode(RuntimeValue val) => val is IntValue
   ? '#${val.value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
   : val is FloatValue
     ? '${val.value.toStringAsExponential(4)}'
+    : val.stringify();
+String stringInfo(RuntimeValue val) =>
+  val is IntValue
+    ? "${stringColor(val)} ${stringCode(val)} | isDark: ${Colors.isDark(val.value)} Temp: ${Colors.getTemperature(val.value)}"
     : val.stringify();
 
 void printEval<T extends EvalResult>(T result) {
@@ -121,7 +124,7 @@ void printEval<T extends EvalResult>(T result) {
     // color column
     if (entry.value is IntValue) {
       final v = entry.value as IntValue;
-      row.color = '\x1B[7m${ansiColoredText(' ' * colorBlock, v.value)}';
+      row.color = '\x1B[7m${Colors.ansiText(' ' * colorBlock, v.value)}';
     } else {
       row.color = ' ' * colorBlock;
     }
@@ -180,9 +183,9 @@ void printEval<T extends EvalResult>(T result) {
 
 void printColorLiterals() {
   final EvalList list = EvalList(
-    List.generate(LITERALS.colorLiterals.length,
+    List.generate(colorLiterals.length,
       (i) {
-        final lit = LITERALS.colorLiterals[i];
+        final lit = colorLiterals[i];
         return EvalEntry(key: lit.$1, value: IntValue(lit.$2));
       },
       growable:  false

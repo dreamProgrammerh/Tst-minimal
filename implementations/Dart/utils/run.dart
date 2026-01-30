@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import '../constants/const-functions.dart';
 import '../error/errors.dart';
 import '../error/reporter.dart';
 import '../eval/evaluator.dart';
@@ -112,8 +111,7 @@ class TstmRun {
     if (useCatch && reload)
       throw ArgumentError("You cannot reload while using catched program!");
     
-    if (seed != null) 
-      randomSeed(seed);
+    if (seed != null); // TODO compleate this part
     
     int lexerTime, parserTime, evalTime, endTime;
     
