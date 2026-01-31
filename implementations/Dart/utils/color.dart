@@ -764,33 +764,73 @@ ArgbColor grayscale(ArgbColor color) {
 }
 
 @pragma('vm:prefer-inline')
-ArgbColor tint(ArgbColor color, int delta) {
-  // Move all channels by delta value towards white 
+ArgbColor tint(ArgbColor color, double percentage) {
+  // Mix color with white (100% = pure white)
+  // percentage: 0.0 (original color) to 1.0 (pure white)
+  final double p = percentage.clamp(0.0, 1.0);
+  
   final a = color & 0xFF000000;
   int r = (color >> 16) & 0xFF;
   int g = (color >> 8) & 0xFF;
   int b = color & 0xFF;
   
-  delta = delta.abs();
-  r = (r + delta).clamp(0, 255);
-  g = (g + delta).clamp(0, 255);
-  b = (b + delta).clamp(0, 255);
-  return a | (r << 16) | (g << 8) | b;
+  // Mix with white #FFFFFF
+  r = ((r * (1.0 - p) + 255 * p)).round();
+  g = ((g * (1.0 - p) + 255 * p)).round();
+  b = ((b * (1.0 - p) + 255 * p)).round();
+  
+  return a | (r.clamp(0, 255) << 16) | 
+            (g.clamp(0, 255) << 8) | 
+            b.clamp(0, 255);
 }
 
 @pragma('vm:prefer-inline')
-ArgbColor tone(ArgbColor color, int delta) { // Should this be named shade??
-  // Move all channels by delta value towards black 
+ArgbColor tone(ArgbColor color, double percentage) {
+  // Mix color with gray of same luminance
+  // percentage: 0.0 (original color) to 1.0 (pure gray)
+  final double p = percentage.clamp(0.0, 1.0);
+  
   final a = color & 0xFF000000;
   int r = (color >> 16) & 0xFF;
   int g = (color >> 8) & 0xFF;
   int b = color & 0xFF;
   
-  delta = delta.abs();
-  r = (r - delta).clamp(0, 255);
-  g = (g - delta).clamp(0, 255);
-  b = (b - delta).clamp(0, 255);
-  return a | (r << 16) | (g << 8) | b;
+  // Calculate relative luminance (perceived brightness)
+  // Using standard sRGB luminance formula
+  final double luminance = 
+      (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255.0;
+  
+  final int gray = (luminance * 255).round();
+  
+  // Mix with calculated gray
+  r = ((r * (1.0 - p) + gray * p)).round();
+  g = ((g * (1.0 - p) + gray * p)).round();
+  b = ((b * (1.0 - p) + gray * p)).round();
+  
+  return a | (r.clamp(0, 255) << 16) | 
+            (g.clamp(0, 255) << 8) | 
+            b.clamp(0, 255);
+}
+
+@pragma('vm:prefer-inline')
+ArgbColor shade(ArgbColor color, double percentage) {
+  // Mix color with black (100% = pure black)
+  // percentage: 0.0 (original color) to 1.0 (pure black)
+  final double p = percentage.clamp(0.0, 1.0);
+  
+  final a = color & 0xFF000000;
+  int r = (color >> 16) & 0xFF;
+  int g = (color >> 8) & 0xFF;
+  int b = color & 0xFF;
+  
+  // Mix with black #000000
+  r = (r * (1.0 - p)).round();
+  g = (g * (1.0 - p)).round();
+  b = (b * (1.0 - p)).round();
+  
+  return a | (r.clamp(0, 255) << 16) | 
+            (g.clamp(0, 255) << 8) | 
+            b.clamp(0, 255);
 }
 
 @pragma('vm:prefer-inline')

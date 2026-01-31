@@ -215,16 +215,23 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
 
   ('tint', 2, (args) {
     final color = args[0].asInt();
-    final delta = args[1].asInt();
+    final percentage = args[1].asFloat();
 
-    return IntValue(Colors.tint(color, delta));
+    return IntValue(Colors.tint(color, percentage));
   }),
 
   ('tone', 2, (args) {
     final color = args[0].asInt();
-    final delta = args[1].asInt();
+    final percentage = args[1].asFloat();
 
-    return IntValue(Colors.tone(color, delta));
+    return IntValue(Colors.tone(color, percentage));
+  }),
+
+  ('shade', 2, (args) {
+    final color = args[0].asInt();
+    final percentage = args[1].asFloat();
+
+    return IntValue(Colors.shade(color, percentage));
   }),
 
   ('shift', 2, (args) {
