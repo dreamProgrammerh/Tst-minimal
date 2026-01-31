@@ -7,4 +7,7 @@ const List<(String, RuntimeValue)> mathLiterals = [
   ('E', FloatValue(2.718281828459045)),
   ('NaN', FloatValue(double.nan)),
   ('Infinity', FloatValue(double.infinity)),
+  ('DTR', FloatValue(0.017453292519943295)),  // degree to radain
+  ('RTD', FloatValue(57.29577951308232)),     // radian to degree
+  ('CDist', FloatValue(441.6729559300637)),   // rgb color max distance
 ];

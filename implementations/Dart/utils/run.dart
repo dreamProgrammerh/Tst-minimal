@@ -7,6 +7,8 @@ import '../lexer/lexer.dart';
 import '../lexer/source.dart';
 import '../parser/ast.dart';
 import '../parser/parser.dart';
+import '../primitives/functions/colors.dart';
+import '../primitives/functions/math.dart';
 import '../runtime/builtins.dart';
 import '../runtime/results.dart';
 import 'log.dart' as Log;
@@ -106,12 +108,17 @@ class TstmRun {
     bool printResult = false,
     bool useCatch = false,
     bool reload = false,
-    int? seed}) {
+    int? colorSeed,
+    int? mathSeed}) {
     
     if (useCatch && reload)
       throw ArgumentError("You cannot reload while using catched program!");
     
-    if (seed != null); // TODO compleate this part
+    if (colorSeed != null)
+      colorSeedFeed(colorSeed);
+    
+    if (mathSeed != null)
+      mathSeedFeed(mathSeed);
     
     int lexerTime, parserTime, evalTime, endTime;
     

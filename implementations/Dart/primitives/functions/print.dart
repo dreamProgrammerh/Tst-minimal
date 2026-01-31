@@ -3,12 +3,14 @@ import '../../runtime/values.dart';
 import '../../utils/log.dart' as Log;
 
 @pragma('vm:prefer-inline')
-String _buildString(List<RuntimeValue> args, String Function(RuntimeValue) fn) {
+String _buildString(List<RuntimeValue> args,
+    String Function(RuntimeValue) fn,
+    [String separator = ', ']) {
   StringBuffer sb = StringBuffer();
   
   for (int i = 0; i < args.length; i++) {
     if (i != 0)
-      sb.write(', ');
+      sb.write(separator);
     
     final v = args[i];
     sb.write(fn(v));
@@ -24,7 +26,7 @@ final List<(String, int, BuiltinFunction)> printFuncs = [
       return InvalidValue.instance;
     }
     
-    print(_buildString(args, Log.stringInfo));
+    print(_buildString(args, Log.stringInfo, '\n'));
     return args[0];
   }),
   

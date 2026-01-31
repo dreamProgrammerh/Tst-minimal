@@ -1,5 +1,3 @@
-// TODO: clean this file and add most of fmath functions
-
 import 'dart:math' as Math;
 import '../../utils/fmath.dart' as fMath;
 
@@ -8,11 +6,41 @@ import '../../runtime/values.dart';
 
 Math.Random _rand = Math.Random();
 
-void randomSeed(int seed) {
+void mathSeedFeed(int seed) {
   _rand = Math.Random(seed);
 }
 
 final List<(String, int, BuiltinFunction)> mathFuncs = [
+  ('random', -1, (args) {
+    if (args.length > 2) {
+      RuntimeState.error('random cannot accept more than 2 arguments');
+      return InvalidValue.instance;
+    }
+    
+    if (args.isEmpty) return FloatValue(_rand.nextDouble());
+      
+    if (args.length == 1) {
+      final max = args[0].asFloat();
+      return args[0] is IntValue
+        ? IntValue(_rand.nextInt(max.toInt()))
+        : FloatValue(_rand.nextDouble() * max);
+    
+    } // else args.length == 2
+    
+    final min = args[0].asFloat();
+    final max = args[1].asFloat();
+    
+    return args[0] is IntValue && args[1] is IntValue
+      ? IntValue(_rand.nextInt((max - min).toInt()) + min.toInt())
+      : FloatValue(_rand.nextDouble() * (max - min) + min);
+  }),
+  
+  ('seed', 1, (args) {
+    final x = args[0].asFloat();
+    mathSeedFeed(x.toInt());
+    return args[0];
+  }),
+  
   ('max', -1, (args) {
     if (args.length < 2) {
       RuntimeState.error('max need at least 2 arguments');
@@ -29,6 +57,15 @@ final List<(String, int, BuiltinFunction)> mathFuncs = [
     }
     
     return args.kthElement(1, (a, b) => a.asFloat().compareTo(b.asFloat()));
+  }),
+  
+  ('med', -1, (args) {
+    if (args.length < 3) {
+      RuntimeState.error('med need at least 3 arguments');
+      return InvalidValue.instance;
+    }
+    
+    return args.kthElement(0, (a, b) => a.asFloat().compareTo(b.asFloat()));
   }),
   
   ('sum', -1, (args) {
@@ -50,37 +87,81 @@ final List<(String, int, BuiltinFunction)> mathFuncs = [
     return FloatValue(sum / args.length);
   }),
   
-  ('random', -1, (args) {
-    if (args.length > 2) {
-      RuntimeState.error('random cannot accept more than 2 arguments');
-      return InvalidValue.instance;
-    }
-    
-    if (args.length == 0)
-      return FloatValue(_rand.nextDouble());
-      
-    if (args.length == 1) {
-      double max = args[0].asFloat();
-      return args[0] is IntValue
-        ? IntValue(_rand.nextInt(max.toInt()))
-        : FloatValue(_rand.nextDouble() * max);
-    
-    } // else args.length == 2
-    
-    double min = args[0].asFloat();
-    double max = args[1].asFloat();
-    
-    return args[0] is IntValue && args[1] is IntValue
-      ? IntValue(_rand.nextInt((max - min).toInt()) + min.toInt())
-      : FloatValue(_rand.nextDouble() * (max - min) + min);
+  ('clamp', 3, (args) {
+    final x = args[0].asFloat();
+    final min = args[0].asFloat();
+    final max = args[0].asFloat();
+    return FloatValue(x.clamp(min, max));
+  }),
+  
+  ('round', 1, (args) {
+    final x = args[0].asFloat();
+    return IntValue(x.round());
+  }),
+  
+  ('ceil', 1, (args) {
+    final x = args[0].asFloat();
+    return IntValue(x.ceil());
+  }),
+  
+  ('floor', 1, (args) {
+    final x = args[0].asFloat();
+    return IntValue(x.floor());
+  }),
+  
+  ('abs', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(x.abs());
+  }),
+  
+  ('sign', 1, (args) {
+    final x = args[0].asFloat();
+    return IntValue(x.sign.toInt());
+  }),
+  
+  ('snap', 2, (args) {
+    final x = args[0].asFloat();
+    final y = args[1].asFloat();
+    return FloatValue(fMath.snap(x, y));
+  }),
+  
+  ('snapOffset', 3, (args) {
+    final x = args[0].asFloat();
+    final y = args[1].asFloat();
+    final offset = args[2].asFloat();
+    return FloatValue(fMath.snapOffset(x, y, offset));
+  }),
+  
+  ('unit', 3, (args) {
+    final x = args[0].asFloat();
+    final min = args[0].asFloat();
+    final max = args[0].asFloat();
+    return FloatValue(fMath.unit(x, min, max));
+  }),
+  
+  ('expand', 3, (args) {
+    final x = args[0].asFloat();
+    final min = args[0].asFloat();
+    final max = args[0].asFloat();
+    return FloatValue(fMath.expand(x, min, max));
+  }),
+  
+  ('degree', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(x * fMath.radToDeg);
+  }),
+  
+  ('radian', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(x * fMath.degToRad);
   }),
   
   ('lerp', 3, (args) {
-    bool intLerp = args[0] is IntValue && args[1] is IntValue;
+    final intLerp = args[0] is IntValue && args[1] is IntValue;
     
-    double a = args[0].asFloat();
-    double b = args[1].asFloat();
-    double t = args[2].asFloat();
+    final a = args[0].asFloat();
+    final b = args[1].asFloat();
+    final t = args[2].asFloat();
     
     return intLerp
       ? IntValue((a + (b - a) * t).toInt())
@@ -88,85 +169,64 @@ final List<(String, int, BuiltinFunction)> mathFuncs = [
   }),
   
   ('pow', 2, (args) {
-    bool intLerp = args[0] is IntValue && args[1] is IntValue;
+    final intPow = args[0] is IntValue && args[1] is IntValue;
     
-    double x = args[0].asFloat();
-    double e = args[1].asFloat();
+    final x = args[0].asFloat();
+    final e = args[1].asFloat();
     
-    return intLerp
-      ? FloatValue(Math.pow(x, e).toDouble())
-      : IntValue(Math.pow(x, e).toInt());
+    return intPow
+      ? FloatValue(fMath.pow(x, e).toDouble())
+      : IntValue(fMath.intPow(x, e.toInt()).toInt());
   }),
   
   ('sqrt', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.sqrt(x));
+    final x = args[0].asFloat();
+    return FloatValue(fMath.sqrt(x));
   }),
   
-  ('round', 1, (args) {
-    double x = args[0].asFloat();
-    return IntValue(x.round());
+  ('exp', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(fMath.exp(x));
   }),
   
-  ('ceil', 1, (args) {
-    double x = args[0].asFloat();
-    return IntValue(x.ceil());
-  }),
-  
-  ('floor', 1, (args) {
-    double x = args[0].asFloat();
-    return IntValue(x.floor());
-  }),
-  
-  ('degrees', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue((x / 180) * Math.pi);
-  }),
-  
-  ('radian', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue((x / Math.pi) * 180);
+  ('log', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(fMath.log(x));
   }),
   
   ('sin', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.sin(x));
-  }),
-  
-  ('asin', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.asin(x));
+    final x = args[0].asFloat();
+    return FloatValue(fMath.sin(x));
   }),
   
   ('cos', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.cos(x));
-  }),
-  
-  ('acos', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.acos(x));
+    final x = args[0].asFloat();
+    return FloatValue(fMath.cos(x));
   }),
   
   ('tan', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.tan(x));
+    final x = args[0].asFloat();
+    return FloatValue(fMath.tan(x));
+  }),
+  
+  ('asin', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(fMath.asin(x));
+  }),
+  
+  ('acos', 1, (args) {
+    final x = args[0].asFloat();
+    return FloatValue(fMath.acos(x));
   }),
   
   ('atan', 1, (args) {
-    double x = args[0].asFloat();
-    return FloatValue(Math.atan(x));
+    final x = args[0].asFloat();
+    return FloatValue(fMath.atan(x));
   }),
   
   ('atan2', 2, (args) {
-    double y = args[0].asFloat();
-    double x = args[1].asFloat();
-    return FloatValue(Math.atan2(y, x));
-  }),
-  
-  ('seed', 1, (args) {
-    double x = args[0].asFloat();
-    randomSeed(x.toInt());
-    return args[0];
+    final y = args[0].asFloat();
+    final x = args[1].asFloat();
+    return FloatValue(fMath.atan2(y, x));
   }),
 ];
