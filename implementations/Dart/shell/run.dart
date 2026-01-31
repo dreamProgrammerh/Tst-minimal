@@ -11,7 +11,7 @@ import '../primitives/functions/colors.dart';
 import '../primitives/functions/math.dart';
 import '../runtime/builtins.dart';
 import '../runtime/results.dart';
-import 'log.dart' as Log;
+import '../utils/log.dart' as Log;
 
 class RunResult {
   final List<Token>? tokens;

@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'error/reporter.dart';
-import 'utils/interpreter.dart';
-import 'utils/run.dart';
+import 'shell/interpreter.dart';
+import 'shell/run.dart';
 import 'utils/fmath.dart' as fMath;
 
 void main() async {

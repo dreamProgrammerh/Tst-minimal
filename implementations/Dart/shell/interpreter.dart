@@ -8,9 +8,9 @@ import '../parser/parser.dart';
 import '../runtime/builtins.dart';
 import '../runtime/context.dart';
 import '../runtime/values.dart';
-import 'log.dart' as Log;
+import '../utils/log.dart' as Log;
+import '../utils/string.dart' as StringU;
 import 'run.dart';
-import 'string.dart' as StringU;
 
 enum OutputMode {
   none,
