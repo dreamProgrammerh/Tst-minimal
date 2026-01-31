@@ -8,6 +8,7 @@ import '../parser/parser.dart';
 import '../runtime/builtins.dart';
 import '../runtime/context.dart';
 import '../runtime/values.dart';
+import '../utils/help.dart';
 import '../utils/log.dart' as Log;
 import '../utils/string.dart' as StringU;
 import 'run.dart';
@@ -315,10 +316,11 @@ class TstmInterpreter {
       _SettingArg('.clear', null, (_, _, _) => _write('\x1B[2J\x1B[H')),
       _SettingArg('.path', null, (_, _, _) => _write('${File('').absolute.path}\n')),
       _SettingArg('.time', TimeMode.values.map<String>((e) => e.name).toList(), _argTime),
+      _SettingArg('.helpin', null, _argHelpin),
       _SettingArg('.help', null, _argHelp),
       _SettingArg('.prompt', null, _argPrompt),
       _SettingArg('.runmode', _runModesString, _argRunMode),
-      _SettingArg('.run', null, (_, input, _) => _argRun(input)),
+      _SettingArg('.run', null, _argRun),
       _SettingArg('.mode', OutputMode.values.map<String>((e) => e.name).toList(), _argMode),
       _SettingArg('.print', ["colors", "time", "runmode", "mode", "env"], _argPrint),
     ];
@@ -338,6 +340,7 @@ or start with '.' to use shell arguments:
 \x1B[33m- \x1B[34m.clear:\x1B[0m Clear screen.
 \x1B[33m- \x1B[34m.path:\x1B[0m Show current path.
 \x1B[33m- \x1B[34m.time:\x1B[0m Enable time measurement.
+\x1B[33m- \x1B[34m.helpin:\x1B[0m Print help message about something.
 \x1B[33m- \x1B[34m.help:\x1B[0m Print this message.
 \x1B[33m- \x1B[34m.prompt:\x1B[0m Change interpreter prefix.
 \x1B[33m- \x1B[34m.runmode:\x1B[0m Set run print mode.
@@ -345,6 +348,18 @@ or start with '.' to use shell arguments:
 \x1B[33m- \x1B[34m.mode:\x1B[0m Set interpreter output mode.
 \x1B[33m- \x1B[34m.print:\x1B[0m Print different lists and states.\n"""
     );
+  }
+  
+  void _argHelpin(_SettingArg self, String input, List<int> selected) {
+    input = input.trim();
+    if (input.isEmpty) return;
+    
+    final args = StringU.splitString(input);
+    
+    for (final arg in args) {
+      final help = getHelp(arg);
+      _write('$help\n');
+    }
   }
 
   void _argPrompt(_SettingArg self, String input, List<int> selected) {
@@ -361,7 +376,7 @@ or start with '.' to use shell arguments:
       _runModes = selected;
   }
 
-  Future<void> _argRun(String input) async {
+  void _argRun(_SettingArg self, String input, List<int> selected) {
     input = input.trim();
     if (input.isEmpty) return;
 
