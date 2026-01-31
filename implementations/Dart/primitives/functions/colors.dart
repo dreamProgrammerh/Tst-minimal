@@ -46,7 +46,7 @@ final List<BuiltinSignature> colorFuncs = [
     final g = args[1].asInt() & 0xff;
     final b = args[2].asInt() & 0xff;
 
-    return IntValue((0xff << 24) | (r << 16) | (g << 8) | b);
+    return IntValue(0xFF000000 | (r << 16) | (g << 8) | b);
   }),
 
   ('hslo',
@@ -155,7 +155,7 @@ final List<BuiltinSignature> colorFuncs = [
     final color = args[0].asInt();
     final percentage = args[1].asFloat();
 
-    return IntValue(Colors.brightness(color, percentage));
+    return IntValue(Colors.saturation(color, percentage));
   }),
 
   ('hue',
@@ -164,7 +164,7 @@ final List<BuiltinSignature> colorFuncs = [
     final color = args[0].asInt();
     final angle = args[1].asFloat();
 
-    return IntValue(Colors.brightness(color, angle));
+    return IntValue(Colors.hue(color, angle));
   }),
 
   ('shiftHue',
