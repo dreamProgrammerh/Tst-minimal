@@ -36,17 +36,17 @@ void _initLiterals() {
 void _initFunctions() {
   // Solid
   for (final func in solidFuncs)
-    registerFuncWithArgs(func.$1, func.$2, func.$3);  
+    registerFuncSignature(func);  
   
   // Print
   for (final func in printFuncs)
-    registerFuncWithArgs(func.$1, func.$2, func.$3);  
+    registerFuncSignature(func);  
     
   // Math
   for (final func in mathFuncs)
-    registerFuncWithArgs(func.$1, func.$2, func.$3);  
+    registerFuncSignature(func);  
   
   // Colors
   for (final func in colorFuncs)
-    registerFuncWithArgs(func.$1, func.$2, func.$3);
+    registerFuncSignature(func);
 }

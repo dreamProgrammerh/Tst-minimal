@@ -19,10 +19,10 @@ String _buildString(List<RuntimeValue> args,
   return sb.toString();
 }
 
-final List<(String, int, BuiltinFunction)> printFuncs = [
-  ('info', -1, (args) {
+final List<BuiltinSignature> printFuncs = [
+  ('info', null, null, null, (args) {
     if (args.length == 0) {
-      RuntimeState.error('info need at least arguments');
+      RuntimeState.error('info need at least one arguments');
       return InvalidValue.instance;
     }
     
@@ -30,9 +30,9 @@ final List<(String, int, BuiltinFunction)> printFuncs = [
     return args[0];
   }),
   
-  ('print', -1, (args) {
+  ('print', null, null, null, (args) {
     if (args.length == 0) {
-      RuntimeState.error('print need at least arguments');
+      RuntimeState.error('print need at least one arguments');
       return InvalidValue.instance;
     }
     
@@ -40,9 +40,9 @@ final List<(String, int, BuiltinFunction)> printFuncs = [
     return args[0];
   }),
   
-  ('printc', -1, (args) {
+  ('printc', null, null, null, (args) {
     if (args.length == 0) {
-      RuntimeState.error('printc need at least arguments');
+      RuntimeState.error('printc need at least one arguments');
       return InvalidValue.instance;
     }
     
@@ -50,9 +50,9 @@ final List<(String, int, BuiltinFunction)> printFuncs = [
     return args[0];
   }),
   
-  ('printo', -1, (args) {
+  ('printo', null, null, null, (args) {
     if (args.length == 0) {
-      RuntimeState.error('printo need at least arguments');
+      RuntimeState.error('printo need at least one arguments');
       return InvalidValue.instance;
     }
     
@@ -60,9 +60,9 @@ final List<(String, int, BuiltinFunction)> printFuncs = [
     return args[0];
   }),
   
-  ('printco', -1, (args) {
+  ('printco', null, null, null, (args) {
     if (args.length == 0) {
-      RuntimeState.error('printco need at least arguments');
+      RuntimeState.error('printco need at least one arguments');
       return InvalidValue.instance;
     }
     

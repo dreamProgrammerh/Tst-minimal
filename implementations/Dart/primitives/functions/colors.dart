@@ -5,23 +5,21 @@ import '../../runtime/values.dart';
 import '../../utils/color.dart' as Colors;
 
 Math.Random _rand = Math.Random();
+void colorSeedFeed(int seed) => _rand = Math.Random(seed);
 
-void colorSeedFeed(int seed) {
-  _rand = Math.Random(seed);
-}
-
-final List<(String, int, BuiltinFunction)> colorFuncs = [
-  ('randomColor', 0, (_) {
+final List<BuiltinSignature> colorFuncs = [
+  ('randomColor', [], [], null, (_) {
     return IntValue(0xFF000000 | _rand.nextInt(0xFFFFFF));
   }),
 
-  ('seedColor', 1, (args) {
-    double x = args[0].asFloat();
-    colorSeedFeed(x.toInt());
+  ('seedColor', [AT_int], ["seed"], null, (args) {
+    colorSeedFeed(args[0].asInt());
     return args[0];
   }),
 
-  ('rgba', 4, (args) {
+  ('rgba',
+    [AT_int, AT_int, AT_int, AT_int],
+    ["r", "g", "b", "a"], null, (args) {
     final r = args[0].asInt() & 0xff;
     final g = args[1].asInt() & 0xff;
     final b = args[2].asInt() & 0xff;
@@ -30,7 +28,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue((a << 24) | (r << 16) | (g << 8) | b);
   }),
 
-  ('rgbo', 4, (args) {
+  ('rgbo',
+    [AT_int, AT_int, AT_int, AT_float],
+    ["r", "g", "b", "o"], null, (args) {
     final r = args[0].asInt() & 0xff;
     final g = args[1].asInt() & 0xff;
     final b = args[2].asInt() & 0xff;
@@ -39,7 +39,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue((a << 24) | (r << 16) | (g << 8) | b);
   }),
 
-  ('rgb', 3, (args) {
+  ('rgb',
+    [AT_int, AT_int, AT_int],
+    ["r", "g", "b"], null, (args) {
     final r = args[0].asInt() & 0xff;
     final g = args[1].asInt() & 0xff;
     final b = args[2].asInt() & 0xff;
@@ -47,7 +49,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue((0xff << 24) | (r << 16) | (g << 8) | b);
   }),
 
-  ('hslo', 4, (args) {
+  ('hslo',
+    [AT_float, AT_float, AT_float, AT_float],
+    ["h", "s", "l", "o"], null, (args) {
     final h = args[0].asFloat();
     final s = args[1].asFloat();
     final l = args[2].asFloat();
@@ -56,7 +60,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue(Colors.hsl(h, s, l, o));
   }),
 
-  ('hsl', 3, (args) {
+  ('hsl',
+    [AT_float, AT_float, AT_float],
+    ["h", "s", "l"], null, (args) {
     final h = args[0].asFloat();
     final s = args[1].asFloat();
     final l = args[2].asFloat();
@@ -64,7 +70,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue(Colors.hsl(h, s, l));
   }),
 
-  ('hsvo', 4, (args) {
+  ('hsvo',
+    [AT_float, AT_float, AT_float, AT_float],
+    ["h", "s", "v", "o"], null, (args) {
     final h = args[0].asFloat();
     final s = args[1].asFloat();
     final v = args[2].asFloat();
@@ -73,7 +81,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue(Colors.hsv(h, s, v, o));
   }),
 
-  ('hsv', 3, (args) {
+  ('hsv',
+    [AT_float, AT_float, AT_float],
+    ["h", "s", "v"], null, (args) {
     final h = args[0].asFloat();
     final s = args[1].asFloat();
     final v = args[2].asFloat();
@@ -81,7 +91,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue(Colors.hsv(h, s, v));
   }),
 
-  ('cymka', 3, (args) {
+  ('cymka',
+    [AT_int, AT_int, AT_int, AT_int, AT_int],
+    ["c", "m", "y", "k", "a"], null, (args) {
     final c = args[0].asInt();
     final m = args[1].asInt();
     final y = args[2].asInt();
@@ -91,7 +103,9 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue(Colors.cmyk(c, m, y, k, a));
   }),
 
-  ('cymk', 3, (args) {
+  ('cymk',
+    [AT_int, AT_int, AT_int, AT_int],
+    ["c", "m", "y", "k"], null, (args) {
     final c = args[0].asInt();
     final m = args[1].asInt();
     final y = args[2].asInt();
@@ -100,230 +114,262 @@ final List<(String, int, BuiltinFunction)> colorFuncs = [
     return IntValue(Colors.cmyk(c, m, y, k));
   }),
 
-  ('hex', 1, (args) {
+  ('hex',
+    [AT_int],
+    ["hex"], null, (args) {
     final code = args[0].asInt();
 
     return IntValue(Colors.hex(code));
   }),
 
-  ('lighten', 2, (args) {
+  ('lighten',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
-    final percent = args[1].asFloat();
+    final percentage = args[1].asFloat();
 
-    return IntValue(Colors.lighten(color, percent));
+    return IntValue(Colors.lighten(color, percentage));
   }),
 
-  ('darken', 2, (args) {
+  ('darken',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
-    final percent = args[1].asFloat();
+    final percentage = args[1].asFloat();
 
-    return IntValue(Colors.darken(color, percent));
+    return IntValue(Colors.darken(color, percentage));
   }),
 
-  ('brightness', 2, (args) {
+  ('brightness',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
-    final factor = args[1].asFloat();
+    final percentage = args[1].asFloat();
 
-    return IntValue(Colors.brightness(color, factor));
+    return IntValue(Colors.brightness(color, percentage));
   }),
 
-  ('saturation', 2, (args) {
+  ('saturation',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
-    final factor = args[1].asFloat();
+    final percentage = args[1].asFloat();
 
-    return IntValue(Colors.brightness(color, factor));
+    return IntValue(Colors.brightness(color, percentage));
   }),
 
-  ('hue', 2, (args) {
+  ('hue',
+    [AT_int, AT_float],
+    ["color", "angle"], null, (args) {
     final color = args[0].asInt();
     final angle = args[1].asFloat();
 
     return IntValue(Colors.brightness(color, angle));
   }),
 
-  ('shiftHue', 2, (args) {
+  ('shiftHue',
+    [AT_int, AT_float],
+    ["color", "radians"], null, (args) {
     final color = args[0].asInt();
     final radians = args[1].asFloat();
 
     return IntValue(Colors.shiftHue(color, radians));
   }),
 
-  ('temperature', 2, (args) {
+  ('temperature',
+    [AT_int, AT_float],
+    ["color", "temperature"], null, (args) {
     final color = args[0].asInt();
     final temp = args[1].asFloat();
 
     return IntValue(Colors.temperature(color, temp));
   }),
 
-  ('shiftTemperature', 2, (args) {
+  ('shiftTemperature',
+    [AT_int, AT_float],
+    ["color", "temperature"], null, (args) {
     final color = args[0].asInt();
     final temp = args[1].asFloat();
 
     return IntValue(Colors.shiftTemperature(color, temp));
   }),
 
-  ('mix', 3, (args) {
-    final color1 = args[0].asInt();
-    final color2 = args[1].asInt();
+  ('mix',
+    [AT_int, AT_int, AT_float],
+    ["colorA", "colorB", "t"], null, (args) {
+    final colorA = args[0].asInt();
+    final colorB = args[1].asInt();
     final t = args[2].asFloat();
 
-    return IntValue(Colors.mix(color1, color2, t));
+    return IntValue(Colors.mix(colorA, colorB, t));
   }),
 
-  ('blend', 2, (args) {
-    final color1 = args[0].asInt();
-    final color2 = args[1].asInt();
+  ('blend',
+    [AT_int, AT_int],
+    ["colorA", "colorB"], null, (args) {
+    final colorA = args[0].asInt();
+    final colorB = args[1].asInt();
 
-    return IntValue(Colors.blendScreen(color1, color2));
+    return IntValue(Colors.blendScreen(colorA, colorB));
   }),
 
-  ('invert', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.invert(color));
+  ('invert', [AT_int], ["color"], null, (args) {
+    return IntValue(Colors.invert(args[0].asInt()));
   }),
 
-  ('grayscale', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.grayscale(color));
+  ('grayscale', [AT_int], ["color"], null, (args) {
+    return IntValue(Colors.grayscale(args[0].asInt()));
   }),
 
-  ('neon', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.neon(color));
+  ('neon', [AT_int], ["color"], null, (args) {
+    return IntValue(Colors.neon(args[0].asInt()));
   }),
 
-  ('pastel', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.pastel(color));
+  ('pastel', [AT_int], ["color"], null, (args) {
+    return IntValue(Colors.pastel(args[0].asInt()));
   }),
 
-  ('pressa', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.pressa(color));
+  ('pressa', [AT_int], ["color"], null, (args) {
+    return IntValue(Colors.pressa(args[0].asInt()));
   }),
 
-  ('complement', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.complement(color));
+  ('complement', [AT_int], ["color"], null, (args) {
+    return IntValue(Colors.complement(args[0].asInt()));
   }),
 
-  ('tint', 2, (args) {
+  ('tint',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
     final percentage = args[1].asFloat();
 
     return IntValue(Colors.tint(color, percentage));
   }),
 
-  ('tone', 2, (args) {
+  ('tone',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
     final percentage = args[1].asFloat();
 
     return IntValue(Colors.tone(color, percentage));
   }),
 
-  ('shade', 2, (args) {
+  ('shade',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
     final percentage = args[1].asFloat();
 
     return IntValue(Colors.shade(color, percentage));
   }),
 
-  ('shift', 2, (args) {
+  ('shift',
+    [AT_int, AT_int],
+    ["color", "position"], null, (args) {
     final color = args[0].asInt();
     final pos = args[1].asInt(); // 0-255
 
     return IntValue(Colors.shift(color, pos));
   }),
 
-  ('opacity', 2, (args) {
+  ('opacity',
+    [AT_int, AT_float],
+    ["color", "percentage"], null, (args) {
     final color = args[0].asInt();
     final percent = args[1].asFloat();
 
     return IntValue(Colors.opacity(color, percent));
   }),
 
-  ('contrast', 2, (args) {
+  ('contrast',
+    [AT_int, AT_float],
+    ["color", "factor"], null, (args) {
     final color = args[0].asInt();
     final factor = args[1].asFloat();
 
     return IntValue(Colors.contrast(color, factor));
   }),
 
-  ('vibrance', 2, (args) {
+  ('vibrance',
+    [AT_int, AT_float],
+    ["color", "amount"], null, (args) {
     final color = args[0].asInt();
     final amount = args[1].asFloat();
 
     return IntValue(Colors.vibrance(color, amount));
   }),
 
-  ('glow', 2, (args) {
+  ('glow',
+    [AT_int, AT_float],
+    ["color", "intensity"], null, (args) {
     final color = args[0].asInt();
     final intensity = args[1].asFloat();
 
     return IntValue(Colors.glow(color, intensity));
   }),
 
-  ('distance', 2, (args) {
-    final color1 = args[0].asInt();
-    final color2 = args[1].asInt();
+  ('distance',
+    [AT_int, AT_int],
+    ["colorA", "colorB"], null, (args) {
+    final colorA = args[0].asInt();
+    final colorB = args[1].asInt();
 
-    return FloatValue(Colors.distance(color1, color2));
+    return FloatValue(Colors.distance(colorA, colorB));
   }),
 
-  ('difference', 2, (args) {
-    final color1 = args[0].asInt();
-    final color2 = args[1].asInt();
+  ('difference',
+    [AT_int, AT_int],
+    ["colorA", "colorB"], null, (args) {
+    final colorA = args[0].asInt();
+    final colorB = args[1].asInt();
 
-    return FloatValue(Colors.difference(color1, color2));
-  }),
-  
-  ('isDark', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.isDark(color) ? 1 : 0);
+    return FloatValue(Colors.difference(colorA, colorB));
   }),
   
-  ('isGray', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.isGray(color) ? 1 : 0);
+  ('isDark',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isDark(args[0].asInt()) ? 1 : 0);
   }),
   
-  ('isLight', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.isLight(color) ? 1 : 0);
+  ('isGray',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isGray(args[0].asInt()) ? 1 : 0);
   }),
   
-  ('isNeon', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.isNeon(color) ? 1 : 0);
+  ('isLight',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isLight(args[0].asInt()) ? 1 : 0);
   }),
   
-  ('isPastel', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.isPastel(color) ? 1 : 0);
+  ('isNeon',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isNeon(args[0].asInt()) ? 1 : 0);
   }),
   
-  ('isVibrant', 1, (args) {
-    final color = args[0].asInt();
-
-    return IntValue(Colors.isVibrant(color) ? 1 : 0);
+  ('isPastel',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isPastel(args[0].asInt()) ? 1 : 0);
   }),
   
-  ('isSimilar', 3, (args) {
-    final color1 = args[0].asInt();
-    final color2 = args[1].asInt();
+  ('isVibrant',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isVibrant(args[0].asInt()) ? 1 : 0);
+  }),
+  
+  ('isSimilar',
+    [AT_int, AT_int, AT_float],
+    ["colorA", "colorB", "threshold"], null, (args) {
+    final colorA = args[0].asInt();
+    final colorB = args[1].asInt();
     final threshold = args[2].asFloat();
 
-    return IntValue(Colors.isSimilar(color1, color2, threshold) ? 1 : 0);
+    return IntValue(Colors.isSimilar(colorA, colorB, threshold) ? 1 : 0);
   }),
 ];

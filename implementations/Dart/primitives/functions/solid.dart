@@ -1,19 +1,16 @@
 import '../../runtime/context.dart';
 import '../../runtime/values.dart';
 
-final List<(String, int, BuiltinFunction)> solidFuncs = [
- ('int', 1, (args) {
-   double x = args[0].asFloat();
-   return IntValue(x.toInt());
+final List<BuiltinSignature> solidFuncs = [
+  ('int', [AT_int | AT_float], ["value"], null, (args) {
+   return IntValue(args[0].asInt());
  }),
  
- ('float', 1, (args) {
-   double x = args[0].asFloat();
-   return FloatValue(x);
+ ('float', [AT_int | AT_float], ["value"], null, (args) {
+   return FloatValue(args[0].asFloat());
  }),
  
- ('bool', 1, (args) {
-   double x = args[0].asFloat();
-   return IntValue(x == 0 ? 0 : 1);
+ ('bool', [AT_int | AT_float], ["value"], null, (args) {
+   return IntValue(args[0].asInt() == 0 ? 0 : 1);
  }), 
 ];

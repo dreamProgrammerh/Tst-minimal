@@ -4,6 +4,8 @@ import '../utils/help.dart';
 import 'results.dart';
 import 'values.dart';
 
+// AT short for Argument Type
+
 const AT_none    = 1 << 1;
 const AT_int     = 1 << 2;
 const AT_float   = 1 << 3;
@@ -18,9 +20,9 @@ typedef BuiltinFunction   = RuntimeValue Function(List<RuntimeValue> args);
 typedef RuntimeFunction   = RuntimeValue Function(List<RuntimeValue> args);
 typedef BuiltinSignature  = (
   String name,
-  Signature signature,
-  List<String> names,
-  String help,
+  Signature? signature,
+  List<String>? names,
+  String? help,
   BuiltinFunction fn
 );
  
@@ -36,34 +38,20 @@ void registerFunction(String name, BuiltinFunction fn) {
   _builtinFunctions[name] = fn;
 }
 
-void registerFuncWithArgs(String name, int argsCount, BuiltinFunction fn) {
-  BuiltinFunction func = (args) {
-    if (argsCount == -1) return fn(args);
-    
-    if (args.length != argsCount) {
-      RuntimeState.error('$name ${
-        args.length > 0
-          ? "expects $argsCount arguments"
-          : "doesn't expects any argument"
-      }');
-      return InvalidValue.instance;
-    }
-    
-    return fn(args);
-  };
-  
-  _builtinFunctions[name] = func;
-}
-
 void registerFuncSignature(BuiltinSignature signature) {
   final sigName = signature.$1;
   final sigTypes = signature.$2;
   final sigArgNames = signature.$3;
-  final sigHelpFile = signature.$4.trim();
+  final sigHelpFile = signature.$4;
   final sigFn = signature.$5;
   
-  if (sigHelpFile.isNotEmpty)
-    registerHelp(sigName, sigHelpFile);
+  if (sigHelpFile != null && sigHelpFile.trim().isNotEmpty)
+    registerHelp(sigName, sigHelpFile.trim());
+    
+  if (sigTypes == null) {
+    _builtinFunctions[sigName] = sigFn;
+    return;
+  }
   
   final BuiltinFunction func = (args) {
     // Check argument count

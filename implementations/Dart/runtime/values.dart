@@ -54,7 +54,7 @@ class InvalidValue extends RuntimeValue {
 
   @override
   int32 asInt() {
-    RuntimeState.error('Invalid cannot be float');
+    RuntimeState.error('Invalid cannot be int');
     return 0;
   }
   
@@ -71,6 +71,7 @@ class IntValue extends RuntimeValue {
 
   @override
   int32 asInt() => value;
+  
   @override
   float32 asFloat() => value.toDouble();
 
@@ -86,10 +87,8 @@ class FloatValue extends RuntimeValue {
   const FloatValue(this.value);
 
   @override
-  int32 asInt() {
-    RuntimeState.error('Cannot convert float to int implicitly');
-    return 0;
-  }
+  int32 asInt() => value.toInt();
+
   @override
   float32 asFloat() => value;
 
