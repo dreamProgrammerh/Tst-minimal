@@ -675,9 +675,9 @@ bool isVibrant(ArgbColor c) {
 }
 
 @pragma('vm:prefer-inline')
-bool isSimilar(ArgbColor c1, ArgbColor c2, [double threshold = 10.0]) {
-  // Check if colors are visually similar (within threshold distance)
-  return distance(c1, c2) < threshold;
+bool isSimilar(ArgbColor c1, ArgbColor c2, [double threshold = 0.2]) {
+  // Check if colors are visually similar (within threshold percentage)
+  return (distance(c1, c2) / rgbDistance) < threshold;
 }
 
 // Color Manipulation - Transforming and adjusting colors
