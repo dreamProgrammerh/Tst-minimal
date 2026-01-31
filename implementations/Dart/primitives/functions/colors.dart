@@ -290,6 +290,24 @@ final List<BuiltinSignature> colorFuncs = [
 
     return IntValue(Colors.contrast(color, factor));
   }),
+  
+  ('calm',
+    [AT_int, AT_float],
+    ["color", "intensity"], null, (args) {
+    final color = args[0].asInt();
+    final intensity = args[1].asFloat();
+
+    return IntValue(Colors.calm(color, intensity));
+  }),
+  
+  ('shout',
+    [AT_int, AT_float],
+    ["color", "intensity"], null, (args) {
+    final color = args[0].asInt();
+    final intensity = args[1].asFloat();
+
+    return IntValue(Colors.shout(color, intensity));
+  }),
 
   ('vibrance',
     [AT_int, AT_float],
@@ -361,6 +379,24 @@ final List<BuiltinSignature> colorFuncs = [
     [AT_int],
     ["color"], null, (args) {
     return IntValue(Colors.isVibrant(args[0].asInt()) ? 1 : 0);
+  }),
+  
+  ('isCalm',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isCalm(args[0].asInt()) ? 1 : 0);
+  }),
+  
+  ('isShout',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isShout(args[0].asInt()) ? 1 : 0);
+  }),
+  
+  ('isNeutral',
+    [AT_int],
+    ["color"], null, (args) {
+    return IntValue(Colors.isNeutral(args[0].asInt()) ? 1 : 0);
   }),
   
   ('isSimilar',

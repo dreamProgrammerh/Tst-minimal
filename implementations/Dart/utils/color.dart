@@ -563,6 +563,41 @@ double getLuminance(ArgbColor c) {
   return 0.2126 * rf + 0.7152 * gf + 0.0722 * bf; // Luminance weights
 }
 
+// Gradient detection - how calm/shout a color is (0.0-1.0)
+
+@pragma('vm:prefer-inline')
+double calmness(ArgbColor c) {
+  // Returns 0.0 (not calm at all) to 1.0 (very calm)
+  final s = getSaturation(c);
+  final l = getBrightness(c);
+  
+  // Calmness score based on:
+  // * Inverse of saturation (lower saturation = more calm)
+  // * Distance from extreme lightness (closer to middle = more calm)
+  final satScore = 1.0 - s.clamp(0.0, 1.0);
+  final lightScore = 1.0 - (l - 0.5).abs() * 2.0; // 0.5 is most calm
+  
+  // Weighted average (saturation matters more for calmness)
+  return (satScore * 0.7 + lightScore * 0.3).clamp(0.0, 1.0);
+}
+
+@pragma('vm:prefer-inline')
+double shoutness(ArgbColor c) {
+  // Returns 0.0 (not shout at all) to 1.0 (very shout)
+  final s = getSaturation(c);
+  final v = getValue(c);
+  
+  // Shoutness score based on:
+  // * Saturation (higher = more shout)
+  // * Value in optimal range (0.6-0.9 is most shout)
+  final satScore = s.clamp(0.0, 1.0);
+  final valueScore = v < 0.6 ? v / 0.6 : 
+                      v > 0.9 ? (1.0 - (v - 0.9) / 0.1) : 1.0;
+  
+  // Weighted average, saturation matters more for shouting
+  return (satScore * 0.8 + valueScore * 0.2).clamp(0.0, 1.0);
+}
+
 // Color distance metrics
 
 @pragma('vm:prefer-inline')
@@ -672,6 +707,41 @@ bool isVibrant(ArgbColor c) {
   final value = max * _inverseByte;
   
   return saturation > 0.5 && value > 0.5;
+}
+
+@pragma('vm:prefer-inline')
+bool isCalm(ArgbColor c) {
+  // Calm colors: low saturation, medium lightness, not extreme
+  final s = getSaturation(c);  // HSL saturation (0.0-1.0)
+  final l = getBrightness(c);  // HSL lightness (0.0-1.0)
+  
+  // Calm criteria:
+  // 1. Low saturation (< 0.35)
+  // 2. Medium lightness (0.3-0.8) - not too dark or washed out
+  // 3. Not too close to black or white
+  return s < 0.35 && l > 0.3 && l < 0.8;
+}
+
+@pragma('vm:prefer-inline')
+bool isShout(ArgbColor c) {
+  // Shout colors: high saturation, decent brightness, attention-grabbing
+  final s = getSaturation(c);  // HSL saturation (0.0-1.0)
+  final v = getValue(c);       // HSV value (0.0-1.0)
+  
+  // Shout criteria:
+  // 1. High saturation (> 0.65)
+  // 2. Good brightness (> 0.4) - needs to "pop"
+  // 3. Not too dark or washed out
+  return s > 0.65 && v > 0.4 && v < 0.95;
+}
+
+
+@pragma('vm:prefer-inline')
+bool isNeutral(ArgbColor c) {
+  // Neither calm nor shout - very low saturation or extremes
+  final s = getSaturation(c);
+  final l = getBrightness(c);
+  return s < 0.1 || l < 0.1 || l > 0.9;
 }
 
 @pragma('vm:prefer-inline')
@@ -1099,6 +1169,52 @@ ArgbColor pressa(ArgbColor color) {
   final g = (((color >> 8) & 0xFF) * factor).round();
   final b = ((color & 0xFF) * factor).round();
   return rgba(r, g, b, a);
+}
+
+ArgbColor calm(ArgbColor color, [double intensity = 0.5]) {
+  intensity = intensity.clamp(0.0, 1.0);
+  final HSL = toHslo(color);
+  
+  // reduce saturation more for already intense colors
+  // Use power curve: s' = s * (1 - intensity)^1.5
+  final newS = HSL.s * math.pow(1.0 - intensity, 1.5);
+  
+  // For lightness: move towards middle gray (0.5) but preserve
+  // the "feel" of the original color
+  final grayBias = 0.5;
+  final newL = HSL.l + (grayBias - HSL.l) * intensity * 0.3;
+  
+  // slight desaturation of hue (warm colors cool down, cool colors warm up)
+  // This creates more harmonious calm colors
+  final hueShift = intensity * 10.0 * degToRad; // Small shift (max 10°)
+  final newH = HSL.h + (HSL.h > math.pi ? -hueShift : hueShift);
+  
+  return hsl(newH % _tau, newS.clamp(0.0, 1.0), newL.clamp(0.0, 1.0), HSL.o);
+}
+
+ArgbColor shout(ArgbColor color, [double intensity = 0.5]) {
+  const m = 120 * degToRad; // 120° in radians
+  
+  intensity = intensity.clamp(0.0, 1.0);
+  final HSL = toHslo(color);
+  
+  // use S-curve for saturation boost
+  // Makes mid-saturation colors shout more than already saturated ones
+  final baseS = HSL.s;
+  final boostedS = baseS < 0.5 
+    ? baseS * (1.0 + intensity * 1.5)     // Big boost for low saturation
+    : baseS + (1.0 - baseS) * intensity; // Moderate boost for high saturation
+  
+  // For lightness: optimal shouting is at L=0.65 (research shows)
+  final targetL = 0.65;
+  final newL = HSL.l + (targetL - HSL.l) * intensity;
+  
+  // slight hue intensification
+  // Push hues towards their purest form (0°, 120°, 240° for RGB)
+  final pureHue = ((HSL.h / m).round() * m) % _tau;
+  final newH = HSL.h + (pureHue - HSL.h) * (intensity * 0.2 * degToRad);
+  
+  return hsl(newH % _tau, boostedS.clamp(0.0, 1.0), newL.clamp(0.0, 1.0), HSL.o);
 }
 
 @pragma('vm:prefer-inline')
