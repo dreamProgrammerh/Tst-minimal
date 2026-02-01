@@ -4,7 +4,6 @@ import 'error/reporter.dart';
 import 'shell/interpreter.dart';
 import 'shell/run.dart';
 import 'utils/fmath.dart' as fMath;
-import 'utils/help.dart';
 
 void main() async {
   fMath.loadFMathLib();
@@ -20,7 +19,6 @@ void main() async {
   );
   
   bool runFile = false;
-  registerHelp('print', 'print.txt');
 
   // ignore: dead_code
   if (runFile) {

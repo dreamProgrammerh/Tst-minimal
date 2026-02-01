@@ -27,7 +27,7 @@ final List<BuiltinSignature> printFuncs = [
     return args[0];
   }),
   
-  ('print', [AT_extend | AT_any], ["values"], null, (args) {
+  ('print', [AT_extend | AT_any], ["values"], 'print.txt', (args) {
     if (args.isEmpty) return InvalidValue.instance;
     
     print(_buildString(args, Log.stringValue));

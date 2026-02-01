@@ -1,1 +1,49 @@
-print(values...: int | float)
+print(...values: any)
+Prints one or more values to the standard output.
+
+DESCRIPTION:
+  The print function outputs values to the console, converting each value
+  to its string representation. Multiple arguments are separated by commas
+  and a space.
+
+USAGE:
+  print(value1, value2, ..., valueN)
+
+ARGUMENTS:
+  values... (any) : One or more values to print. Can be of any type
+                    (int, float, etc.). If no
+                    arguments are provided, nothing is printed.
+
+RETURNS:
+  The first argument passed to print, allowing for inline debugging:
+    x: 5
+    y: print($x) + 10  // prints '5' and sets y to 15
+
+EXAMPLES:
+  Basic usage:
+    \> print(42)
+    42
+    
+    \> print(11, 22)
+    11, 22
+
+  Debugging expressions:
+    \> x: 10
+    \> y: print($x * 2) + 5
+    20
+    \> print($y)
+    25
+
+  Multiple types:
+    \> print(3.14, 56, -14)
+    3.14, 56, -14
+
+  Empty call (does nothing):
+    \> print()
+
+NOTES:
+  - Values are converted to strings using their natural representation
+  - The output ends with a newline character
+
+SEE ALSO:
+  info, printc, printo, printco

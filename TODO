@@ -47,3 +47,8 @@ platforms:
   - ✕ ios
 
 build platforms and complete _libraryPath getter in `fmath.dart` file,
+
+## write Help message
+
+write **help message** for each *builtin function*,
+use help/print.txt as reference
