@@ -20,51 +20,36 @@ String _buildString(List<RuntimeValue> args,
 }
 
 final List<BuiltinSignature> printFuncs = [
-  ('info', null, null, null, (args) {
-    if (args.length == 0) {
-      RuntimeState.error('info need at least one arguments');
-      return InvalidValue.instance;
-    }
+  ('info', [AT_extend | AT_any], ["values"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
     
     print(_buildString(args, Log.stringInfo, '\n'));
     return args[0];
   }),
   
-  ('print', null, null, null, (args) {
-    if (args.length == 0) {
-      RuntimeState.error('print need at least one arguments');
-      return InvalidValue.instance;
-    }
+  ('print', [AT_extend | AT_any], ["values"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
     
     print(_buildString(args, Log.stringValue));
     return args[0];
   }),
   
-  ('printc', null, null, null, (args) {
-    if (args.length == 0) {
-      RuntimeState.error('printc need at least one arguments');
-      return InvalidValue.instance;
-    }
+  ('printc', [AT_extend | AT_any], ["values"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
     
     print(_buildString(args, Log.stringColor));
     return args[0];
   }),
   
-  ('printo', null, null, null, (args) {
-    if (args.length == 0) {
-      RuntimeState.error('printo need at least one arguments');
-      return InvalidValue.instance;
-    }
+  ('printo', [AT_extend | AT_any], ["values"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
     
     print(_buildString(args, Log.stringCode));
     return args[0];
   }),
   
-  ('printco', null, null, null, (args) {
-    if (args.length == 0) {
-      RuntimeState.error('printco need at least one arguments');
-      return InvalidValue.instance;
-    }
+  ('printco', [AT_extend | AT_any], ["values"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
     
     print(_buildString(args, (v) => '${Log.stringColor(v)} ${Log.stringCode(v)}'));
     return args[0];

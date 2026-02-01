@@ -1,4 +1,12 @@
+import 'dart:io';
+
+import '../constants/const-signature.dart';
+import '../primitives/functions/colors.dart';
+import '../primitives/functions/math.dart';
+import '../primitives/functions/print.dart';
+import '../primitives/functions/solid.dart';
 import '../primitives/literals/colors.dart';
+import '../runtime/context.dart';
 import '../runtime/results.dart';
 import '../runtime/values.dart';
 import 'color.dart' as Colors;
@@ -192,4 +200,62 @@ void printColorLiterals() {
   ));
   
   printEval(list);
+}
+
+void printBuiltinFunctions() {
+  const pre = '$sigTitleColor  * ';
+  final sb = StringBuffer();
+  
+  sb.write("${sigTitleColor}Solid:$sigReset\n");
+  for (final func in solidFuncs)
+    sb.write('$pre${functionString(func.$1, func.$2, func.$3)}\n'); 
+  
+  sb.write("\n${sigTitleColor}Print:$sigReset\n");
+  for (final func in printFuncs)
+    sb.write('$pre${functionString(func.$1, func.$2, func.$3)}\n'); 
+    
+  sb.write("\n${sigTitleColor}Math:$sigReset\n");
+  for (final func in mathFuncs)
+    sb.write('$pre${functionString(func.$1, func.$2, func.$3)}\n'); 
+  
+  sb.write("\n${sigTitleColor}Colors:$sigReset\n");
+  for (final func in colorFuncs)
+    sb.write('$pre${functionString(func.$1, func.$2, func.$3)}\n'); 
+
+  stdout.write(sb.toString());
+}
+
+String functionString(String fnName, [Signature? s, List<String>? names]) {
+  if (s == null) return "$sigNameColor$fnName$sigPunchColor($sigArgNameColor${names?[0] ?? ''}...$sigPunchColor)$sigReset";
+  
+  final sb = StringBuffer('$sigNameColor$fnName$sigPunchColor(');
+  
+  int I = 0;
+  for (final types in s) {
+    if (I != 0) sb.write('$sigPunchColor, ');
+    
+    final extendArg = types & AT_extend != 0;
+    final optionalArg = types & AT_optional != 0;
+    
+    final name = names?[I];
+    if (name != null)
+      sb.write('$sigArgNameColor${extendArg ? '...' : ''}$name${optionalArg ? '?' : ''}: ');
+      
+    else if (extendArg || optionalArg)
+      sb.write('$sigArgNameColor${extendArg ? '...' : ''}${optionalArg ? '?' : ''} ');
+    
+    int J = 0;
+    for (int i = AL_Idx; i < AL_Types.length; i++) {
+      final type = AL_Types[i];
+      if (types & type != 0) {
+        if (J != 0) sb.write('$sigSepColor | ');
+        sb.write('$sigArgTypeColor${AL_Names[i]}');
+        J++;
+      }
+    }
+    I++;
+  }
+  
+  sb.write('$sigPunchColor)$sigReset');
+  return sb.toString();
 }

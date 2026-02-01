@@ -13,9 +13,9 @@ const AT_any      = 1 << 3;
 const AT_int      = 1 << 4;
 const AT_float    = 1 << 5;
 
-const AT_Types    = [AT_extend, AT_optional, AT_none, AT_any, AT_int, AT_float];
-const AT_Names    = ["Extend", "Optional", "none", "any", "int", "float"];
-const AT_Idx      = 2;
+const AL_Types    = [AT_extend, AT_optional, AT_none, AT_any, AT_int, AT_float];
+const AL_Names    = ["Extend", "Optional", "none", "any", "int", "float"];
+const AL_Idx      = 2;
 
 typedef Signature         = List<int>;
 typedef BuiltinLiteral    = RuntimeValue;
@@ -222,7 +222,7 @@ bool _typeMatches(RuntimeValue value, int expectedTypeMask) {
   final index = _getValueTypeIndex(value);
   if (index == -1) return false;
   
-  final valueType = AT_Types[index];
+  final valueType = AL_Types[index];
   
   // Check if the value's type is in the allowed mask
   return (expectedTypeMask & valueType) != 0;
@@ -232,9 +232,9 @@ bool _typeMatches(RuntimeValue value, int expectedTypeMask) {
 @pragma('vm:prefer-inline')
 String _getTypeName(int typeMask) {
   final List<String> names = [];
-  for (int i = 0; i < AT_Types.length; i++) {
-    if (typeMask & AT_Types[i] != 0) {
-      names.add(AT_Names[i]);
+  for (int i = 0; i < AL_Types.length; i++) {
+    if (typeMask & AL_Types[i] != 0) {
+      names.add(AL_Names[i]);
     }
   }
   return names.join(' | ');
@@ -246,7 +246,7 @@ String _getValueTypeName(RuntimeValue value) {
   final index = _getValueTypeIndex(value);
   if (index == -1) return 'unknown';
   
-  return AT_Names[index];
+  return AL_Names[index];
 }
 
 String stringifySignature(Signature s, [List<String>? names, String? fnName]) {
@@ -267,11 +267,11 @@ String stringifySignature(Signature s, [List<String>? names, String? fnName]) {
       sb.write('${extendArg ? '...' : ''}${optionalArg ? '?' : ''} ');
     
     int J = 0;
-    for (int i = AT_Idx; i < AT_Types.length; i++) {
-      final type = AT_Types[i];
+    for (int i = AL_Idx; i < AL_Types.length; i++) {
+      final type = AL_Types[i];
       if (types & type != 0) {
         if (J != 0) sb.write(' | ');
-        sb.write(AT_Names[i]);
+        sb.write(AL_Names[i]);
         J++;
       }
     }

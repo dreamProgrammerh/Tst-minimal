@@ -8,12 +8,9 @@ Math.Random _rand = Math.Random();
 void mathSeedFeed(int seed) => _rand = Math.Random(seed);
 
 final List<BuiltinSignature> mathFuncs = [
-  ('random', null, null, null, (args) {
-    if (args.length > 2) {
-      RuntimeState.error('random cannot accept more than 2 arguments');
-      return InvalidValue.instance;
-    }
-    
+  ('random',
+    [AT_optional | AT_int | AT_float, AT_optional | AT_int | AT_float],
+    ["max", "min"], null, (args) {
     if (args.isEmpty) return FloatValue(_rand.nextDouble());
       
     if (args.length == 1) {
@@ -24,8 +21,8 @@ final List<BuiltinSignature> mathFuncs = [
     
     } // else args.length == 2
     
-    final min = args[0].asFloat();
-    final max = args[1].asFloat();
+    final max = args[0].asFloat();
+    final min = args[1].asFloat();
     
     return args[0] is IntValue && args[1] is IntValue
       ? IntValue(_rand.nextInt((max - min).toInt()) + min.toInt())
@@ -38,47 +35,37 @@ final List<BuiltinSignature> mathFuncs = [
     return args[0];
   }),
   
-  ('max', null, null, null, (args) {
-    if (args.length < 2) {
-      RuntimeState.error('max need at least 2 arguments');
-      return InvalidValue.instance;
-    }
+  ('max', [AT_extend | AT_int | AT_float], ["numbers"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
+    if (args.length==1) return args[0];
     
     return args.kthElement(-1, (a, b) => a.asFloat().compareTo(b.asFloat()));
   }),
   
-  ('min', null, null, null, (args) {
-    if (args.length < 2) {
-      RuntimeState.error('min need at least 2 arguments');
-      return InvalidValue.instance;
-    }
+  ('min', [AT_extend | AT_int | AT_float], ["numbers"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
+    if (args.length==1) return args[0];
     
     return args.kthElement(1, (a, b) => a.asFloat().compareTo(b.asFloat()));
   }),
   
-  ('med', null, null, null, (args) {
-    if (args.length < 3) {
-      RuntimeState.error('med need at least 3 arguments');
-      return InvalidValue.instance;
-    }
+  ('med', [AT_extend | AT_int | AT_float], ["numbers"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
+    if (args.length==1) return args[0];
     
     return args.kthElement(0, (a, b) => a.asFloat().compareTo(b.asFloat()));
   }),
   
-  ('sum', null, null, null, (args) {
-    if (args.length < 2) {
-      RuntimeState.error('sum need at least 2 arguments');
-      return InvalidValue.instance;
-    }
+  ('sum', [AT_extend | AT_int | AT_float], ["numbers"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
+    if (args.length==1) return args[0];
     
     return FloatValue(args.fold(0.0, (a, b) => a + b.asFloat()));
   }),
   
-  ('avg', null, null, null, (args) {
-    if (args.length < 2) {
-      RuntimeState.error('avg need at least 2 arguments');
-      return InvalidValue.instance;
-    }
+  ('avg', [AT_extend | AT_int | AT_float], ["numbers"], null, (args) {
+    if (args.isEmpty) return InvalidValue.instance;
+    if (args.length==1) return args[0];
     
     final sum = args.fold(0.0, (a, b) => a + b.asFloat());
     return FloatValue(sum / args.length);
