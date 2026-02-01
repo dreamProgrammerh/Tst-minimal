@@ -25,3 +25,7 @@ String getHelp(String name) {
     return 'Error reading help file: $e';
   }
 }
+
+List<String> getAvailableHelps() {
+  return _helpFiles.keys.toList();
+}

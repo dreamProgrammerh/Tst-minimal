@@ -333,7 +333,7 @@ class TstmInterpreter {
   void _argHelp(_SettingArg self, String input, List<int> selected) {
     _write(
 """\
-type expression to shell to get evaluated,
+type expression in the shell to get evaluated,
 or start with '.' to use shell arguments:
 
 \x1B[32m- \x1B[34m.exit:\x1B[0m Stop the interpreter.
@@ -355,7 +355,10 @@ or start with '.' to use shell arguments:
   
   void _argHelpin(_SettingArg self, String input, List<int> selected) {
     input = input.trim();
-    if (input.isEmpty) return;
+    if (input.isEmpty) {
+      Log.printAvailableHelps();
+      return;
+    }
     
     final args = StringU.splitString(input);
     
@@ -370,7 +373,13 @@ or start with '.' to use shell arguments:
       if (input[0] == ' ' && input.length > 1)
         input = input.substring(1);
 
-      _prompt = input;
+      _prompt = input.replaceAllMapped(RegExp(r'(\$[e|E|\$])'), (Match matchs) {
+        final m = matchs[0]!.substring(1); // skip $ sign
+        
+        if (m == '\$') return '\$';
+        else if (m == 'e' || m == 'E') return '\x1B';
+        else return m;
+      });
     }
   }
 
@@ -381,7 +390,14 @@ or start with '.' to use shell arguments:
 
   void _argRun(_SettingArg self, String input, List<int> selected) {
     input = input.trim();
-    if (input.isEmpty) return;
+    if (input.isEmpty) {
+      _write(
+"""\
+\x1B[34mUsage:
+  \x1B[33m.run \x1B[36m<path> \x1B[37m<...args>\x1B[30m
+""");
+      return;
+    }
 
     final args = StringU.splitString(input);
     final path = args[0];

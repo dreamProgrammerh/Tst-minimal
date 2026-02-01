@@ -10,6 +10,7 @@ import '../runtime/context.dart';
 import '../runtime/results.dart';
 import '../runtime/values.dart';
 import 'color.dart' as Colors;
+import 'help.dart';
 
 class _TableRow {
   String color;
@@ -40,15 +41,54 @@ double _round(double a, int b) {
 
 String stringValue(RuntimeValue val) => val.stringify();
 String stringColor(RuntimeValue val) => Colors.ansi(val is IntValue ? val.value : 0);
-String stringCode(RuntimeValue val) => val is IntValue
-  ? '#${val.value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}'
-  : val is FloatValue
-    ? '${val.value.toStringAsExponential(4)}'
-    : val.stringify();
-String stringInfo(RuntimeValue val) =>
-  val is IntValue
-    ? "${stringColor(val)} ${stringCode(val)} | isDark: ${Colors.isDark(val.value)} Temp: ${Colors.getTemperature(val.value)}"
-    : val.stringify();
+
+String stringCode(RuntimeValue val) {
+  if (val is IntValue)
+    return '#${val.value.toUnsigned(32).toRadixString(16).padRight(8, '0').toUpperCase()}';
+    
+  else if (val is FloatValue)
+    return '${val.value.toStringAsExponential(4)}';
+    
+  else
+    return val.stringify();
+} 
+    
+String stringColoredCode(RuntimeValue val) {
+  final code = stringCode(val);
+  
+  if (val is IntValue) {
+    return '\x1B[33m#\x1B[37m${
+      code.substring(1, 3)}\x1B[31m${
+      code.substring(3, 5)}\x1B[32m${
+      code.substring(5, 7)}\x1B[34m${
+      code.substring(7, 9)}\x1B[0m';
+  
+  } else if (val is FloatValue) {
+    final eIndex = code.lastIndexOf('e');
+    return '\x1B[33m${
+      code.substring(0, eIndex)}\x1B[34m${
+      code.substring(eIndex)}\x1B[0m';
+  
+  } else
+    return '\x1B[33m$code\x1B[0m';
+}
+
+String stringInfo(RuntimeValue val) {
+  const keyColor = "\x1B[34m";
+  const valColor = "\x1B[33m";
+  
+  if (val is IntValue) {
+    return "${stringColor(val)} ${
+      stringColoredCode(val)} \x1B[39m| ${
+      keyColor}isDark: $valColor${
+      Colors.isDark(val.value)}\x1B[39m, ${
+      keyColor}temperature: $valColor${
+      Colors.getTemperature(val.value).toStringAsFixed(2)}\x1B[0m";
+    
+  } else {
+    return stringColoredCode(val);
+  }
+}
 
 void printEval<T extends EvalResult>(T result) {
   StringBuffer sb = StringBuffer();
@@ -222,6 +262,8 @@ void printBuiltinFunctions() {
   for (final func in colorFuncs)
     sb.write('$pre${functionString(func.$1, func.$2, func.$3)}\n'); 
 
+  
+  sb.write('$sigReset');
   stdout.write(sb.toString());
 }
 
@@ -258,4 +300,19 @@ String functionString(String fnName, [Signature? s, List<String>? names]) {
   
   sb.write('$sigPunchColor)$sigReset');
   return sb.toString();
+}
+
+void printAvailableHelps() {
+  const helpColor = "\x1B[35m";
+  const preColor = "\x1B[34m";
+  const pre = '$sigTitleColor  * ';
+  
+  final helps = getAvailableHelps();
+  final sb = StringBuffer("${preColor}All Helps:\n");
+  
+  for (final h in helps)
+    sb.write('$preColor$pre$helpColor$h\n');
+  
+  sb.write('\x1B[0m');
+  stdout.write(sb.toString());
 }
