@@ -6,13 +6,16 @@ import 'values.dart';
 
 // AT short for Argument Type
 
-const AT_none    = 1 << 1;
-const AT_int     = 1 << 2;
-const AT_float   = 1 << 3;
+const AT_extend   = 1 << 0;
+const AT_optional = 1 << 1;
+const AT_none     = 1 << 2;
+const AT_any      = 1 << 3;
+const AT_int      = 1 << 4;
+const AT_float    = 1 << 5;
 
-const AT_Types    = [AT_none, AT_int, AT_float];
-const AT_Values   = [AT_none, IntValue, AT_float];
-const AT_Names    = ["none", "int", "float"];
+const AT_Types    = [AT_extend, AT_optional, AT_none, AT_any, AT_int, AT_float];
+const AT_Names    = ["Extend", "Optional", "none", "any", "int", "float"];
+const AT_Idx      = 2;
 
 typedef Signature         = List<int>;
 typedef BuiltinLiteral    = RuntimeValue;
@@ -25,7 +28,7 @@ typedef BuiltinSignature  = (
   String? help,
   BuiltinFunction fn
 );
- 
+
 final Map<String, BuiltinLiteral> _builtinLiterals = {};
 final Map<String, BuiltinFunction> _builtinFunctions = {};
 
@@ -44,42 +47,94 @@ void registerFuncSignature(BuiltinSignature signature) {
   final sigArgNames = signature.$3;
   final sigHelpFile = signature.$4;
   final sigFn = signature.$5;
-  
-  if (sigHelpFile != null && sigHelpFile.trim().isNotEmpty)
-    registerHelp(sigName, sigHelpFile.trim());
-    
+
   if (sigTypes == null) {
     _builtinFunctions[sigName] = sigFn;
     return;
   }
-  
+
+  final (
+    bool extended,
+    int optionalCount,
+    bool error) = _validateArgs(sigTypes);
+
+  if (error) return;
+
+  if (sigHelpFile != null && sigHelpFile.trim().isNotEmpty)
+    registerHelp(sigName, sigHelpFile.trim());
+
   final BuiltinFunction func = (args) {
+    // Calculate minimum and maximum allowed arguments
+    int minArgs;
+    int maxArgs;
+
+    if (extended) {
+      // Extended: min = all required args, max = unlimited
+      minArgs = sigTypes.length - 1;  // All except the extended one
+      maxArgs = -1;                   // -1 means unlimited
+    } else if (optionalCount > 0) {
+      // Optionals: min = required args, max = all args
+      minArgs = sigTypes.length - optionalCount;
+      maxArgs = sigTypes.length;
+    } else {
+      // Fixed: exact number required
+      minArgs = sigTypes.length;
+      maxArgs = sigTypes.length;
+    }
+
     // Check argument count
-    if (args.length != sigTypes.length) {
+    if (args.length < minArgs || (maxArgs != -1 && args.length > maxArgs)) {
       final expectedSig = stringifySignature(sigTypes, sigArgNames, sigName);
+
+      String expectedCount = extended
+        ? 'at least $minArgs'
+        : optionalCount > 0
+        ? 'between $minArgs and $maxArgs'
+        : 'exactly $minArgs';
+
       RuntimeState.error(
-        'Function "$sigName" expects ${sigTypes.length} arguments, '
+        'Function "$sigName" expects $expectedCount arguments, '
         'but got ${args.length}. Expected signature: $expectedSig'
       );
       return InvalidValue.instance;
     }
-    
+
     // Check argument types
     for (int i = 0; i < args.length; i++) {
-      if (!_typeMatches(args[i], sigTypes[i])) {
-        final expectedSig = stringifySignature(sigTypes, sigArgNames, sigName);
-        final expectedType = _getTypeName(sigTypes[i]); 
-        final actualType = _getValueTypeName(args[i]);
-        
+      int typeMask;
+
+      // Determine which type mask to use based on position
+      if (extended && i >= sigTypes.length - 1) {
+        // For extended arguments, use the last type mask
+        typeMask = sigTypes.last;
+      } else if (i < sigTypes.length) {
+        // Regular argument
+        typeMask = sigTypes[i];
+      } else {
+        // Should not happen due to previous validation
+        RuntimeState.error('Internal error: argument index out of bounds');
+        return InvalidValue.instance;
+      }
+
+      // Remove extend/optional flags for type checking (keep only type bits)
+      final typeBits = typeMask & ~(AT_extend | AT_optional);
+
+      // Check if type matches
+      final match = typeBits & AT_any != 0 || _typeMatches(args[i], typeBits);
+      if (!match) {
+        final expectedSig   = stringifySignature(sigTypes, sigArgNames, sigName);
+        final expectedType  = _getTypeName(typeBits);
+        final actualType    = _getValueTypeName(args[i]);
+
         RuntimeState.error(
-          'Argument ${i + 1} of function "$sigName" should be of type '
+          'Argument ${i + 1} "${sigArgNames?[i < sigArgNames.length ? i : i]} of function "$sigName" should be of type '
           '$expectedType, but got $actualType. '
           'Expected signature: $expectedSig'
         );
         return InvalidValue.instance;
       }
     }
-    
+
     // All checks passed, execute the function
     try {
       return sigFn(args);
@@ -88,7 +143,7 @@ void registerFuncSignature(BuiltinSignature signature) {
       return InvalidValue.instance;
     }
   };
-  
+
   _builtinFunctions[sigName] = func;
 }
 
@@ -96,11 +151,67 @@ void registerFuncSignature(BuiltinSignature signature) {
 @pragma('vm:prefer-inline')
 int _getValueTypeIndex(RuntimeValue value) {
   switch (value) {
-    case InvalidValue _: return 0;  // AT_none
-    case IntValue _: return 1;      // AT_int
-    case FloatValue _: return 2;    // AT_float
-    default: return -1;             // unknown
+    case InvalidValue _:  return 2;   // AT_none
+    case IntValue _:      return 4;   // AT_int
+    case FloatValue _:    return 5;   // AT_float
+    default:              return -1;  // unknown
   }
+}
+
+@pragma('vm:prefer-inline')
+(bool extended, int optionalCount, bool error) _validateArgs(Signature s) {
+  int optionalCount = 0;
+  bool extended = false;
+
+  for (int i = 0; i < s.length; i++) {
+    final t = s[i];
+    final extendArg = t & AT_extend != 0;
+    final optionalArg = t & AT_optional != 0;
+
+    // Check for both flags in the same argument
+    if (extendArg && optionalArg) {
+      RuntimeState.error('argument cannot be both extended and optional');
+      return (false, 0, true);
+    }
+
+    // Check for extend flag
+    if (extendArg) {
+      if (extended) {
+        RuntimeState.error('only one extended argument is allowed');
+        return (false, 0, true);
+      }
+
+      extended = true;
+
+      // Extended must be at the end
+      if (i != s.length - 1) {
+        RuntimeState.error('extended argument must be at end');
+        return (false, 0, true);
+      }
+
+      // Cannot mix extend with optional
+      if (optionalCount > 0) {
+        RuntimeState.error('extended and optional arguments cannot be mixed');
+        return (false, 0, true);
+      }
+    }
+
+    // Check for optional flag
+    else if (optionalArg) {
+      optionalCount++;
+    }
+
+    // Not optional, not extend - this is a required argument
+    else {
+      // If In optional follow up
+      if (optionalCount > 0) {
+        RuntimeState.error('required argument cannot follow optional arguments');
+        return (false, 0, true);
+      }
+    }
+  }
+
+  return (extended, optionalCount, false);
 }
 
 // Helper function to check if a value matches expected type
@@ -145,11 +256,18 @@ String stringifySignature(Signature s, [List<String>? names, String? fnName]) {
   for (final types in s) {
     if (I != 0) sb.write(', ');
     
+    final extendArg = types & AT_extend != 0;
+    final optionalArg = types & AT_optional != 0;
+    
     final name = names?[I];
-    if (name != null) sb.write('$name: ');
+    if (name != null)
+      sb.write('${extendArg ? '...' : ''}$name${optionalArg ? '?' : ''}: ');
+      
+    else if (extendArg || optionalArg)
+      sb.write('${extendArg ? '...' : ''}${optionalArg ? '?' : ''} ');
     
     int J = 0;
-    for (int i = 0; i < AT_Types.length; i++) {
+    for (int i = AT_Idx; i < AT_Types.length; i++) {
       final type = AT_Types[i];
       if (types & type != 0) {
         if (J != 0) sb.write(' | ');
