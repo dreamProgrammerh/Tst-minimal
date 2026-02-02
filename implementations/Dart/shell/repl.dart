@@ -20,6 +20,7 @@ bool _lastWasCR = false;
 bool _flush = false;
 int _escState = 0; // 0 = normal, 1 = ESC, 2 = ESC [
 int _escParam = 0; // for keys like 2~, 3~
+int _escMod = 0;
 bool _insertMode = false;
 
 bool isRunning = false;
@@ -95,8 +96,13 @@ bool _handleEscape(int b) {
     return false;
   }
 
-  // State 1: ESC received, expecting '['
+  // State 1: ESC received
   if (_escState == 1) {
+    if (b == 100) { // Alt+D & Ctrl+Delete
+      _onCtrlDelete();
+      _escState = 0;
+      return true;
+    }
     if (b == 91) { // '['
       _escState = 2;
       return true;
@@ -128,11 +134,30 @@ bool _handleEscape(int b) {
     return false;
   }
 
-  // State 3: ESC [ <digit> expecting '~'
+  // State 3: ESC [ <digit>
   if (_escState == 3) {
     if (b == 126) { // '~'
       if (_escParam == 2) _onInsert();
       if (_escParam == 3) _onDelete();
+    }
+    if (b == 59) { // ';'
+      _escState = 4;
+      return true;
+    }
+    _escState = 0;
+    return true;
+  }
+  
+  if (_escState == 4 && b >= 48 && b <= 57) {
+    _escMod = b - 48;
+    _escState = 5;
+    return true;
+  }
+  
+  if (_escState == 5) {
+    if (_escParam == 1 && _escMod == 5) {
+      if (b == 68) _onCtrlLeft();
+      if (b == 67) _onCtrlRight();
     }
     _escState = 0;
     return true;
@@ -181,10 +206,27 @@ bool _handleNormalByte(int b) {
 void _handleControlByte(int byte) {
   if (byte == 3) { // Ctrl+C
     _break();
-
-  } else
+    return;
+  }
   if (byte == 17) { // Ctrl+Q
     _quit();
+    return;
+  }
+  if (byte == 23) { // Ctrl+W & Ctrl+Backspace
+    _onCtrlBackspace();
+    return;
+  }
+  if (byte == 12) { // Ctrl+L
+    _clearScreen();
+    return;
+  }
+  if (byte == 1) { // Ctrl+A
+    _onHome();
+    return;
+  }
+  if (byte == 5) { // Ctrl+E
+    _onEnd();
+    return;
   }
 }
 
@@ -251,6 +293,15 @@ void _insertChar(int b) {
   }
 }
 
+void _clearScreen() {
+  // Clear Screen and Move cursor to home
+  _write('\x1B[2J\x1B[H');
+  _write(_prompt);
+
+  _line.clear();
+  _cursor = 0;
+}
+
 void _clearLine() {
   // Move cursor to start and Clear line
   _write('\r\x1B[2K');
@@ -297,6 +348,34 @@ void _loadHistoryEntry() {
   _line = List.from(entry.codeUnits);
   _cursor = _line.length;
   _write(entry);
+}
+
+void _redrawLine() {
+  // Move to start of line and Clear entire line
+  _write('\r\x1B[2K');
+
+  // Write prompt
+  _write(_prompt);
+
+  // Write full line buffer
+  final text = utf8.decode(_line);
+  _write(text);
+
+  // Move cursor to correct position
+  final moveBack = _line.length - _cursor;
+  if (moveBack > 0) {
+    _write('\x1B[${moveBack}D');
+  }
+}
+
+void _redrawCursor() {
+  _write('\r$_prompt');
+  _write(utf8.decode(_line));
+
+  final moveBack = _line.length - _cursor;
+  if (moveBack > 0) {
+    _write('\x1B[${moveBack}D');
+  }
 }
 
 void _onArrowUp() {
@@ -371,4 +450,69 @@ void _onDelete() {
 
   // Move cursor back
   _write('\x1B[${tail.length + 1}D');
+}
+
+void _onCtrlRight() {
+  if (_cursor >= _line.length) return;
+
+  // Skip current word
+  while (_cursor < _line.length && _line[_cursor] != 32) {
+    _cursor++;
+  }
+
+  // Skip spaces
+  while (_cursor < _line.length && _line[_cursor] == 32) {
+    _cursor++;
+  }
+
+  _redrawCursor();
+}
+
+void _onCtrlLeft() {
+  if (_cursor == 0) return;
+
+  // Skip spaces
+  while (_cursor > 0 && _line[_cursor - 1] == 32) {
+    _cursor--;
+  }
+
+  // Skip word characters
+  while (_cursor > 0 && _line[_cursor - 1] != 32) {
+    _cursor--;
+  }
+
+  _redrawCursor();
+}
+
+void _onCtrlBackspace() {
+  if (_cursor == 0) return;
+
+  int start = _cursor;
+
+  // Skip spaces
+  while (start > 0 && _line[start - 1] == 32) start--;
+
+  // Skip word
+  while (start > 0 && _line[start - 1] != 32) start--;
+
+  _line.removeRange(start, _cursor);
+  _cursor = start;
+
+  _redrawLine();
+}
+
+void _onCtrlDelete() {
+  if (_cursor >= _line.length) return;
+
+  int end = _cursor;
+
+  // Skip spaces
+  while (end < _line.length && _line[end] == 32) end++;
+
+  // Skip word
+  while (end < _line.length && _line[end] != 32) end++;
+
+  _line.removeRange(_cursor, end);
+
+  _redrawLine();
 }

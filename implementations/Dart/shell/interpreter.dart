@@ -119,7 +119,7 @@ class TstmInterpreter {
     }
 
     RuntimeState.setup(source, reporter);
-    
+
     REPL.start((bytes, buffer, flush) {
       if (flush) {
         if (buffer.isNotEmpty) {
@@ -201,7 +201,7 @@ class TstmInterpreter {
     if (output.isNotEmpty)
       _write('${output.toString()}\n');
   }
-  
+
   void _printTime(int lexerTime, int parserTime, int evalTime, int endTime) {
     final StringBuffer output = StringBuffer();
     for (int i = 0; i < _timeModes.length; i++) {
@@ -217,27 +217,27 @@ class TstmInterpreter {
         case TimeMode.lexer:
           s = "${mode.name}: ${TimeMode.format(parserTime - lexerTime)}";
           break;
-        
+
         case TimeMode.parser:
           s = "${mode.name}: ${TimeMode.format(evalTime - parserTime)}";
           break;
-        
+
         case TimeMode.eval:
           s = "${mode.name}: ${TimeMode.format(endTime - evalTime)}";
           break;
-        
+
         case TimeMode.compile:
           s = "${mode.name}: ${TimeMode.format(evalTime - lexerTime)}";
           break;
-        
+
         case TimeMode.all:
           s = "${mode.name}: ${TimeMode.format(endTime - lexerTime)}";
           break;
-        
+
         default:
           s = null;
       }
-      
+
       if (s != null)
         output.write(s);
     }
@@ -293,7 +293,7 @@ class TstmInterpreter {
   String _getOptionsHelp(_SettingArg arg) {
     return '\x1B[34m>>\x1B[0m ${arg.name} options\n\x1B[33m>\x1B[0m (${arg.options?.join(', ') ?? ''})';
   }
-  
+
   int _now() => DateTime.now().microsecondsSinceEpoch;
 
   void _end([RuntimeValue? val]) {
@@ -331,39 +331,39 @@ class TstmInterpreter {
   void _argTime(_SettingArg self, String input, List<int> selected) {
     _timeModes = selected.map((i) => TimeMode.values[i]).toList();
   }
-  
+
   void _argHelp(_SettingArg self, String input, List<int> selected) {
     _write(
 """\
-type expression in the shell to get evaluated,
-or start with '.' to use shell arguments:
+type expression in the repl to get evaluated,
+or start with '.' to use repl arguments:
 
-\x1B[32m- \x1B[34m.exit:\x1B[0m Stop the interpreter.
-\x1B[32m- \x1B[34m.clear:\x1B[0m Clear screen.
+\x1B[32m- \x1B[34m.exit:\x1B[0m Stop the repl.
+\x1B[32m- \x1B[34m.clear:\x1B[0m Clear screen (ctrl+l).
 \x1B[32m- \x1B[34m.path:\x1B[0m Show current path.
 \x1B[32m- \x1B[34m.time:\x1B[0m Enable time measurement.
 \x1B[32m- \x1B[34m.helpin:\x1B[0m Print help message about something.
 \x1B[32m- \x1B[34m.help:\x1B[0m Print this message.
-\x1B[32m- \x1B[34m.prompt:\x1B[0m Change interpreter prefix.
+\x1B[32m- \x1B[34m.prompt:\x1B[0m Change repl prefix.
 \x1B[32m- \x1B[34m.runmode:\x1B[0m Set run print mode.
 \x1B[32m- \x1B[34m.run:\x1B[0m Run tstm files.
-\x1B[32m- \x1B[34m.mode:\x1B[0m Set interpreter output mode.
+\x1B[32m- \x1B[34m.mode:\x1B[0m Set repl output mode.
 \x1B[32m- \x1B[34m.print:\x1B[0m Print different lists and states.
 
 \x1B[33mNote: \x1B[37mUsing argument with no options will show you the available options!\x1B[0m
 """
     );
   }
-  
+
   void _argHelpin(_SettingArg self, String input, List<int> selected) {
     input = input.trim();
     if (input.isEmpty) {
       Log.printAvailableHelps();
       return;
     }
-    
+
     final args = StringU.splitString(input);
-    
+
     for (final arg in args) {
       final help = getHelp(arg);
       _write('$help\n');
@@ -377,12 +377,12 @@ or start with '.' to use shell arguments:
 
       _prompt = input.replaceAllMapped(RegExp(r'(\$[e|E|\$])'), (Match matchs) {
         final m = matchs[0]!.substring(1); // skip $ sign
-        
+
         if (m == '\$') return '\$';
         else if (m == 'e' || m == 'E') return '\x1B';
         else return m;
       });
-      
+
       REPL.changePrompt(_prompt);
     }
   }
@@ -419,13 +419,13 @@ or start with '.' to use shell arguments:
       _write("\x1B[31mError:\x1B[0m File '$path' not found.\n");
       return;
     }
-    
+
     final res = runner.run(
       printTokens: _runModes.contains(1),
       printProgram: _runModes.contains(2),
       printResult: _runModes.contains(3),
     );
-    
+
     if (res != null)
       _printTime(res.lexerTime, res.parserTime, res.evalTime, res.endTime);
   }
@@ -440,7 +440,7 @@ or start with '.' to use shell arguments:
         case 0:
           Log.printColorLiterals();
           break;
-          
+
         case 1:
           Log.printBuiltinFunctions();
           break;
@@ -456,7 +456,7 @@ or start with '.' to use shell arguments:
         case 4:
           print(_outModes.map((m) => m.name).join(', '));
           break;
-          
+
         case 5:
           Log.printEval(ctx.map);
           break;
