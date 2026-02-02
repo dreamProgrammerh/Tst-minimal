@@ -114,13 +114,12 @@ class TstmInterpreter {
 
     if (title) {
       _write("\x1B[34mTst\x1B[31mm \x1B[32mv\x1B[0m1.0.0\n");
-      _write("exit using ctrl+q or ctrl+c, or '.exit'\n");
+      _write("exit using ctrl+q, ctrl+c, or '.exit'\n");
       _write("\x1B[33m'.help' for more information.\x1B[0m\n");
     }
 
     RuntimeState.setup(source, reporter);
     
-    _write(_prompt);
     REPL.start((bytes, buffer, flush) {
       if (flush) {
         if (buffer.isNotEmpty) {
@@ -128,10 +127,8 @@ class TstmInterpreter {
           final text = utf8.decode(buffer);
           handleLine(text);
         }
-        
-        _write(_prompt);
       }
-    });
+    }, prompt: _prompt);
   }
 
   void stop() {
@@ -385,6 +382,8 @@ or start with '.' to use shell arguments:
         else if (m == 'e' || m == 'E') return '\x1B';
         else return m;
       });
+      
+      REPL.changePrompt(_prompt);
     }
   }
 
