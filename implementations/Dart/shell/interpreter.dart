@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import '../error/reporter.dart';
@@ -11,6 +12,7 @@ import '../runtime/values.dart';
 import '../utils/help.dart';
 import '../utils/log.dart' as Log;
 import '../utils/string.dart' as StringU;
+import 'repl.dart' as REPL;
 import 'run.dart';
 
 enum OutputMode {
@@ -47,16 +49,16 @@ enum TimeMode {
   static String? format(int qs) {
     if (qs < 1000)
       return "${qs}qs";
-      
+
     else if (qs < 1_000_000)
       return "${(qs * 0.001).toStringAsFixed(2)}ms";
-      
+
     else if (qs < 1_000_000_000)
       return "${(qs * 0.000001).toStringAsFixed(2)}s";
-      
+
     else if (qs < 60_000_000_000)
       return "${(qs * 0.000000001).toStringAsFixed(2)}s";
-      
+
     else {
       final int m = qs ~/ 60_000_000_000;
       final int s = ((qs % 60_000_000_000) * 0.000000001).toInt();
@@ -81,7 +83,6 @@ class TstmInterpreter {
   late final Parser _parser;
   late final List<_SettingArg> arguments;
 
-  bool _running = false;
   String _prompt = "\x1B[32m\\\x1B[34m>\x1B[0m ";
   List<OutputMode> _outModes = [OutputMode.value];
   List<TimeMode> _timeModes = [TimeMode.none];
@@ -113,61 +114,72 @@ class TstmInterpreter {
 
     if (title) {
       _write("\x1B[34mTst\x1B[31mm \x1B[32mv\x1B[0m1.0.0\n");
-      _write("exit using ctrl+c, or '.exit'\n");
+      _write("exit using ctrl+q or ctrl+c, or '.exit'\n");
       _write("\x1B[33m'.help' for more information.\x1B[0m\n");
     }
 
-    _running = true;
-
     RuntimeState.setup(source, reporter);
-    while (_running) {
-      String? input = _input(_prompt);
-      late final int lexerTime, parserTime, evalTime, endTime;
-
-      if (input == null) break;
-
-      if (input.trim().isEmpty || _checkArgument(input)) {
-        _end();
-        continue;
+    
+    _write(_prompt);
+    REPL.start((bytes, buffer, flush) {
+      if (flush) {
+        if (buffer.isNotEmpty) {
+          // Convert bytes to text
+          final text = utf8.decode(buffer);
+          handleLine(text);
+        }
+        
+        _write(_prompt);
       }
-
-      input = input.trim();
-      source.src = input;
-      
-      lexerTime = _now();
-      final tokens = _lexer.tokenize(input);
-
-      if (reporter.hasErrors) {
-        _end();
-        continue;
-      }
-
-      parserTime = _now();
-      final expr = _parser.interpret(tokens);
-
-      if (reporter.hasErrors) {
-        _end();
-        continue;
-      }
-
-      evalTime = _now();
-      final value = Evaluator.evaluate(expr, ctx);
-
-      if (reporter.hasErrors) {
-        _end(value);
-        continue;
-      }
-      
-      endTime = _now();
-
-      _printOutput(value);
-      _printTime(lexerTime, parserTime, evalTime, endTime);
-      _end(value);
-    }
+    });
   }
 
   void stop() {
-    _running = false;
+    REPL.cancel();
+  }
+
+  bool handleLine(String input) {
+    late final int lexerTime, parserTime, evalTime, endTime;
+
+    if (input.trim().isEmpty || _checkArgument(input)) {
+      _end();
+      return false;
+    }
+
+    input = input.trim();
+    source.src = input;
+
+    lexerTime = _now();
+    final tokens = _lexer.tokenize(input);
+
+    if (reporter.hasErrors) {
+      _end();
+      return false;
+    }
+
+    parserTime = _now();
+    final expr = _parser.interpret(tokens);
+
+    if (reporter.hasErrors) {
+      _end();
+      return false;
+    }
+
+    evalTime = _now();
+    final value = Evaluator.evaluate(expr, ctx);
+
+    if (reporter.hasErrors) {
+      _end(value);
+      return false;
+    }
+
+    endTime = _now();
+
+    _printOutput(value);
+    _printTime(lexerTime, parserTime, evalTime, endTime);
+    _end(value);
+
+    return false;
   }
 
   // ~~~~~~~~~~~~~~~~~~~~
@@ -294,13 +306,6 @@ class TstmInterpreter {
 
   void _write(String str) {
     stdout.write(str);
-  }
-
-  String? _input(String? str) {
-    if (str != null)
-      _write(str);
-
-    return stdin.readLineSync();
   }
 
   // ~~~~~~~~~~~~~~~~~~~~
