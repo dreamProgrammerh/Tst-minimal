@@ -19,6 +19,8 @@ String _prompt = "> ";
 bool _lastWasCR = false;
 bool _flush = false;
 int _escState = 0; // 0 = normal, 1 = ESC, 2 = ESC [
+int _escParam = 0; // for keys like 2~, 3~
+bool _insertMode = false;
 
 bool isRunning = false;
 
@@ -72,10 +74,10 @@ void _handleBytes(List<int> bytes) {
   _escState = 0;
 
   for (var b in bytes) {
-    // Escape Char
+    // Escaped characters (arrows, Home, End, etc.)
     if (_handleEscape(b)) continue;
     
-    // Printable, backspace, linefeed, etc.
+    // Visual chars (ASCII, backspace, linefeed, etc.)
     if (_handleNormalByte(b)) continue;
 
     // Control keys (Ctrl+Q, Ctrl+C, etc.)
@@ -103,13 +105,35 @@ bool _handleEscape(int b) {
     return false;
   }
 
-  // State 2: ESC [ received, expecting final code
+  // State 2: ESC [ received
   if (_escState == 2) {
-    if (b == 65) _onArrowUp();
-    else if (b == 66) _onArrowDown();
-    else if (b == 67) _onArrowRight();
-    else if (b == 68) _onArrowLeft();
+    // Arrow keys: A B C D
+    if (b == 65) { _onArrowUp();    _escState = 0; return true; }
+    if (b == 66) { _onArrowDown();  _escState = 0; return true; }
+    if (b == 67) { _onArrowRight(); _escState = 0; return true; }
+    if (b == 68) { _onArrowLeft();  _escState = 0; return true; }
 
+    // Home / End
+    if (b == 72) { _onHome(); _escState = 0; return true; }
+    if (b == 70) { _onEnd();  _escState = 0; return true; }
+
+    // Start of multi‑byte keys: Insert/Delete
+    if (b >= 48 && b <= 57) { // digits
+      _escParam = b - 48;     // store digit
+      _escState = 3;
+      return true;
+    }
+
+    _escState = 0;
+    return false;
+  }
+
+  // State 3: ESC [ <digit> expecting '~'
+  if (_escState == 3) {
+    if (b == 126) { // '~'
+      if (_escParam == 2) _onInsert();
+      if (_escParam == 3) _onDelete();
+    }
     _escState = 0;
     return true;
   }
@@ -208,18 +232,22 @@ void _break() {
   _exit();
 }
 
-void _insertChar(int byte) {
-  _line.insert(_cursor, byte);
+void _insertChar(int b) {
+  if (_insertMode && _cursor < _line.length) {
+    _line[_cursor++] = b; // overwrite
+    _write(String.fromCharCode(b));
+    return;
+  }
+
+  // normal insert mode
+  _line.insert(_cursor, b);
   _cursor++;
 
-  // Rewrite the rest of the line
   final tail = utf8.decode(_line.sublist(_cursor));
-  _write(String.fromCharCode(byte) + tail);
+  _write(String.fromCharCode(b) + tail);
 
-  // Move cursor back to correct position
-  final moveBack = tail.length;
-  if (moveBack > 0) {
-    _write('\x1B[${moveBack}D');
+  if (tail.isNotEmpty) {
+    _write('\x1B[${tail.length}D');
   }
 }
 
@@ -311,4 +339,36 @@ void _onArrowLeft() {
     _cursor--;
     _write('\x1B[D'); // move cursor left
   }
+}
+
+void _onHome() {
+  if (_cursor > 0) {
+    _write('\x1B[${_cursor}D'); // move left N times
+    _cursor = 0;
+  }
+}
+
+void _onEnd() {
+  final move = _line.length - _cursor;
+  if (move > 0) {
+    _write('\x1B[${move}C'); // move right N times
+    _cursor = _line.length;
+  }
+}
+
+void _onInsert() {
+  _insertMode = !_insertMode;
+}
+
+void _onDelete() {
+  if (_cursor >= _line.length) return;
+
+  _line.removeAt(_cursor);
+
+  // Rewrite tail
+  final tail = utf8.decode(_line.sublist(_cursor));
+  _write(tail + ' ');
+
+  // Move cursor back
+  _write('\x1B[${tail.length + 1}D');
 }
