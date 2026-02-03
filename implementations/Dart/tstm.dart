@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'error/reporter.dart';
+import 'shell/completions.dart';
 import 'shell/interpreter.dart';
 import 'shell/run.dart';
-import 'utils/fmath.dart' as fMath;
+import 'utils/fmath.dart';
 
 void main() async {
-  fMath.loadFMathLib();
+  loadFMathLib();
+  initCompletions();
   
   const filePath = "examples/theme.tstm";
   

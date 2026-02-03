@@ -27,6 +27,10 @@ bool _searchMode = false;
 String _savedLine = '';
 int _savedCursor = 0;
 
+String? _suggestion;
+final List<String> _completions = [];
+
+
 bool isRunning = false;
 
 void start(ReplListener listener, {
@@ -68,12 +72,32 @@ void changePrompt(String prompt) {
   _prompt = prompt;
 }
 
+void addCompletion(String completion) {
+  _completions.add(completion);
+}
+
+void addAllCompletion(List<String> completions) {
+  _completions.addAll(completions);
+}
+
+void removeCompletion(String completion) {
+  _completions.remove(completion);
+}
+
+void removeAllCompletion(List<String> completions) {
+  for (var completion in completions)
+    _completions.remove(completion);
+}
+
+void clearCompletions() {
+  _completions.clear();
+}
+
 void _write(Object object) {
   stdout.write(object);
 }
 
 void _handleBytes(List<int> bytes) {
-  // _write(bytes);
   _lastWasCR = false;
   _flush = false;
   _escState = 0;
@@ -213,6 +237,14 @@ bool _handleNormalByte(int b) {
 }
 
 void _handleControlByte(int byte) {
+  if (byte == 9) { // Tab
+    _onTab();
+    return;
+  }
+  if (byte == 0) { // Ctrl+Space
+    _onCtrlSpace();
+    return;
+  }
   if (byte == 3) { // Ctrl+C
     _break();
     return;
@@ -243,6 +275,9 @@ void _handleControlByte(int byte) {
   }
 }
 
+@pragma('vm:perfer-inline')
+bool _isWhitespace(int b) =>
+  b == 32 || b == 9 || b == 10 || b == 13;
 
 void _exit() {
   exit(0);
@@ -310,8 +345,7 @@ void _insertChar(int b) {
     }
   }
   
-  if (_searchMode)
-    _updateSearchUI();
+  _lineUpdate();
 }
 
 void _clearScreen() {
@@ -330,6 +364,16 @@ void _clearLine() {
 
   _line.clear();
   _cursor = 0;
+}
+
+void _lineUpdate() {
+  if (_searchMode) {
+    _updateSearchUI();
+    
+  } else {
+    _updateSuggestions();
+    _redrawLine();
+  }
 }
 
 void _loadHistoryEntry() {
@@ -387,9 +431,9 @@ void _showSearchResult() {
   _write('\n\x1B[2K');
 
   if (match.isEmpty) {
-    _write("\x1B[90m- no match -\x1B[0m");
+    _write("\x1B[30m- no match -\x1B[0m");
   } else {
-    _write('\x1B[30m$match\x1B[0m');
+    _write('\x1B[90m$match\x1B[0m');
   }
 
   // Move back to search line
@@ -424,27 +468,68 @@ void _clearSearchUI() {
   );
 }
 
+String? _currentWord() {
+  if (_line.isEmpty) return null;
+  
+  int start = _line.length - 1;
+  while (start > 0 && !_isWhitespace(_line[--start]));
+  
+  return utf8.decode(_line.sublist(start));
+}
+
+String? _findSuggestion(String? word) {
+  if (word == null || word.isEmpty) return null;
+
+  for (final c in _completions) {
+    if (c.startsWith(word) && c.length > word.length)
+      return c.substring(word.length); // only the unwritten part
+  }
+
+  return null;
+}
+
+void _updateSuggestions() {
+  final word = _currentWord();
+  _suggestion = _findSuggestion(word);
+}
+
+void _applySuggestion() {
+  if (_suggestion == null) return;
+  
+  for (var c in _suggestion!.codeUnits) {
+    _line.insert(_cursor, c);
+    _cursor++;
+  }
+  
+  _suggestion = null;
+  _redrawLine();
+}
+
 void _redrawLine() {
-  // Move to start of line and Clear entire line
-  _write('\r\x1B[2K');
-
-  // Write prompt
-  _write(_prompt);
-
-  // Write full line buffer
   final text = utf8.decode(_line);
-  _write(text);
+  
+  _write(
+    '\r\x1B[2K'     // Clear the line
+    '$_prompt$text' // Write prompt with text
+  );
+  
+  // Draw suggestion in gray
+  if (_suggestion?.isNotEmpty ?? false) {
+    _write('\x1B[90m$_suggestion\x1B[0m');
+  }
 
   // Move cursor to correct position
-  final moveBack = _line.length - _cursor;
+  final ghostLen = _suggestion?.length ?? 0;
+  final moveBack = _line.length - _cursor + ghostLen;
   if (moveBack > 0) {
     _write('\x1B[${moveBack}D');
   }
 }
 
 void _redrawCursor() {
-  _write('\r$_prompt');
-  _write(utf8.decode(_line));
+  final text = utf8.decode(_line);
+  
+  _write('\r$_prompt$text');
 
   final moveBack = _line.length - _cursor;
   if (moveBack > 0) {
@@ -457,20 +542,18 @@ void _onBackspace() {
 
   _cursor--;
   _line.removeAt(_cursor);
-
-  // Move cursor left
-  _write('\x1B[D');
-
-  // Rewrite tail
   final tail = utf8.decode(_line.sublist(_cursor));
-  _write(tail + ' ');
+
+  _write(
+    '\x1B[D'    // Move cursor left
+    '$tail '    // Rewrite tail
+  );
 
   // Move cursor back
   final moveBack = tail.length + 1;
   _write('\x1B[${moveBack}D');
   
-  if (_searchMode)
-    _updateSearchUI();
+  _lineUpdate();
 }
 
 void _onLine() {
@@ -495,6 +578,10 @@ void _onESC() {
   if (_searchMode) {
     _cancelSearch();
   }
+}
+
+void _onTab() {
+  _applySuggestion();
 }
 
 void _onArrowUp() {
@@ -562,28 +649,26 @@ void _onDelete() {
   if (_cursor >= _line.length) return;
 
   _line.removeAt(_cursor);
-
-  // Rewrite tail
   final tail = utf8.decode(_line.sublist(_cursor));
-  _write(tail + ' ');
 
-  // Move cursor back
-  _write('\x1B[${tail.length + 1}D');
+  _write(
+    '$tail '                    // Rewrite tail
+    '\x1B[${tail.length + 1}D'  // Move cursor back
+  );
   
-  if (_searchMode)
-    _updateSearchUI();
+  _lineUpdate();
 }
 
 void _onCtrlRight() {
   if (_cursor >= _line.length) return;
 
   // Skip current word
-  while (_cursor < _line.length && _line[_cursor] != 32) {
+  while (_cursor < _line.length && !_isWhitespace(_line[_cursor])) {
     _cursor++;
   }
 
   // Skip spaces
-  while (_cursor < _line.length && _line[_cursor] == 32) {
+  while (_cursor < _line.length && _isWhitespace(_line[_cursor])) {
     _cursor++;
   }
 
@@ -594,12 +679,12 @@ void _onCtrlLeft() {
   if (_cursor == 0) return;
 
   // Skip spaces
-  while (_cursor > 0 && _line[_cursor - 1] == 32) {
+  while (_cursor > 0 && _isWhitespace(_line[_cursor - 1])) {
     _cursor--;
   }
 
   // Skip word characters
-  while (_cursor > 0 && _line[_cursor - 1] != 32) {
+  while (_cursor > 0 && !_isWhitespace(_line[_cursor - 1])) {
     _cursor--;
   }
 
@@ -612,20 +697,15 @@ void _onCtrlBackspace() {
   int start = _cursor;
 
   // Skip spaces
-  while (start > 0 && _line[start - 1] == 32) start--;
+  while (start > 0 && _isWhitespace(_line[start - 1])) start--;
 
   // Skip word
-  while (start > 0 && _line[start - 1] != 32) start--;
+  while (start > 0 && !_isWhitespace(_line[start - 1])) start--;
 
   _line.removeRange(start, _cursor);
   _cursor = start;
 
-  
-  if (_searchMode)
-    _updateSearchUI();
-    
-  else 
-    _redrawLine();
+  _lineUpdate();
 }
 
 void _onCtrlDelete() {
@@ -634,18 +714,14 @@ void _onCtrlDelete() {
   int end = _cursor;
 
   // Skip spaces
-  while (end < _line.length && _line[end] == 32) end++;
+  while (end < _line.length && _isWhitespace(_line[end])) end++;
 
   // Skip word
-  while (end < _line.length && _line[end] != 32) end++;
+  while (end < _line.length && !_isWhitespace(_line[end])) end++;
 
   _line.removeRange(_cursor, end);
 
-  if (_searchMode)
-    _updateSearchUI();
-    
-  else 
-    _redrawLine();
+  _lineUpdate();
 }
 
 void _onCtrlR() {
@@ -666,3 +742,5 @@ void _onCtrlR() {
   _redrawLine();
   _showSearchResult();
 }
+
+void _onCtrlSpace() { }
