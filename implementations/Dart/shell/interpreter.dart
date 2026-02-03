@@ -155,7 +155,7 @@ class TstmInterpreter {
     }
 
     parserTime = _now();
-    final expr = _parser.interpret(tokens);
+    final expressions = _parser.interpret(tokens);
 
     if (reporter.hasErrors) {
       _end();
@@ -163,7 +163,10 @@ class TstmInterpreter {
     }
 
     evalTime = _now();
-    final value = Evaluator.evaluate(expr, ctx);
+    RuntimeValue value = InvalidValue.instance;
+    for (final expr in expressions) {
+      value = Evaluator.evaluate(expr, ctx);
+    }
 
     if (reporter.hasErrors) {
       _end(value);

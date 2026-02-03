@@ -25,18 +25,23 @@ class Parser {
 
   Position _p(int start) => (start: start, length: _prev.end - start); 
   
-  Expr interpret(List<Token> tokens) {
+  List<Expr> interpret(List<Token> tokens) {
     final I = _pos;
     _pos = this.tokens.length;
     // add new tokens at end
     this.tokens.addAll(tokens);
     
-    final expr = _expression();
+    final expressions = <Expr>[];
+    while (!_isAtEnd) {
+      final expr = _expression();
+      expressions.add(expr);
+    }
+      
     
     // remove new tokens from end
     this.tokens.removeRange(this.tokens.length - tokens.length, this.tokens.length - 1);
     _pos = I;
-    return expr;
+    return expressions;
   }
   
   Program parse() {
