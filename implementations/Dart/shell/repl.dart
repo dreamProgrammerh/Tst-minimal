@@ -331,20 +331,20 @@ void _insertChar(int b) {
   if (_insertMode && _cursor < _line.length) {
     _line[_cursor++] = b; // overwrite
     _write(String.fromCharCode(b));
-    
+
   } else {
     // normal insert mode
     _line.insert(_cursor, b);
     _cursor++;
-  
+
     final tail = utf8.decode(_line.sublist(_cursor));
     _write(String.fromCharCode(b) + tail);
-  
+
     if (tail.isNotEmpty) {
       _write('\x1B[${tail.length}D');
     }
   }
-  
+
   _lineUpdate();
 }
 
@@ -369,7 +369,7 @@ void _clearLine() {
 void _lineUpdate() {
   if (_searchMode) {
     _updateSearchUI();
-    
+
   } else {
     _updateSuggestions();
     _redrawLine();
@@ -470,10 +470,12 @@ void _clearSearchUI() {
 
 String? _currentWord() {
   if (_line.isEmpty) return null;
-  
-  int start = _line.length - 1;
-  while (start > 0 && !_isWhitespace(_line[--start]));
-  
+
+  int start = _line.length;
+  while (start > 0 && !_isWhitespace(_line[start-1])) --start;
+
+  if (_cursor < start) return null;
+
   return utf8.decode(_line.sublist(start));
 }
 
@@ -495,24 +497,24 @@ void _updateSuggestions() {
 
 void _applySuggestion() {
   if (_suggestion == null) return;
-  
+
   for (var c in _suggestion!.codeUnits) {
     _line.insert(_cursor, c);
     _cursor++;
   }
-  
+
   _suggestion = null;
   _redrawLine();
 }
 
 void _redrawLine() {
   final text = utf8.decode(_line);
-  
+
   _write(
     '\r\x1B[2K'     // Clear the line
     '$_prompt$text' // Write prompt with text
   );
-  
+
   // Draw suggestion in gray
   if (_suggestion?.isNotEmpty ?? false) {
     _write('\x1B[90m$_suggestion\x1B[0m');
@@ -528,7 +530,7 @@ void _redrawLine() {
 
 void _redrawCursor() {
   final text = utf8.decode(_line);
-  
+
   _write('\r$_prompt$text');
 
   final moveBack = _line.length - _cursor;
@@ -552,7 +554,7 @@ void _onBackspace() {
   // Move cursor back
   final moveBack = tail.length + 1;
   _write('\x1B[${moveBack}D');
-  
+
   _lineUpdate();
 }
 
@@ -561,6 +563,10 @@ void _onLine() {
     _acceptSearch();
     return;
   }
+
+  // Clear suggestion
+  _suggestion = null;
+  _redrawLine();
 
   final text = utf8.decode(_line).trim();
   _cursor = 0;
@@ -655,7 +661,7 @@ void _onDelete() {
     '$tail '                    // Rewrite tail
     '\x1B[${tail.length + 1}D'  // Move cursor back
   );
-  
+
   _lineUpdate();
 }
 
@@ -729,7 +735,7 @@ void _onCtrlR() {
     _cancelSearch();
     return;
   }
-  
+
   _searchMode = true;
 
   _savedLine = utf8.decode(_line);
