@@ -87,5 +87,6 @@ const Operators = [
   Not,
   Question,
   Colon,
+  Semicolon,
   Hash,
 ];
