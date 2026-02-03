@@ -339,7 +339,7 @@ type expression in the repl to get evaluated,
 or start with '.' to use repl arguments:
 
 \x1B[32m- \x1B[34m.exit:\x1B[0m Stop the repl.
-\x1B[32m- \x1B[34m.clear:\x1B[0m Clear screen (ctrl+l).
+\x1B[32m- \x1B[34m.clear:\x1B[0m Clear screen.
 \x1B[32m- \x1B[34m.path:\x1B[0m Show current path.
 \x1B[32m- \x1B[34m.time:\x1B[0m Enable time measurement.
 \x1B[32m- \x1B[34m.helpin:\x1B[0m Print help message about something.
@@ -349,6 +349,13 @@ or start with '.' to use repl arguments:
 \x1B[32m- \x1B[34m.run:\x1B[0m Run tstm files.
 \x1B[32m- \x1B[34m.mode:\x1B[0m Set repl output mode.
 \x1B[32m- \x1B[34m.print:\x1B[0m Print different lists and states.
+
+\x1B[32m* \x1B[34mctrl+q:\x1B[0m Quit REPL.
+\x1B[32m* \x1B[34mctrl+c:\x1B[0m Cancel REPL.
+\x1B[32m* \x1B[34mctrl+a:\x1B[0m Line Start.
+\x1B[32m* \x1B[34mctrl+e:\x1B[0m Line End.
+\x1B[32m* \x1B[34mctrl+l:\x1B[0m Clear screen.
+\x1B[32m* \x1B[34mctrl+r:\x1B[0m Search history.
 
 \x1B[33mNote: \x1B[37mUsing argument with no options will show you the available options!\x1B[0m
 """

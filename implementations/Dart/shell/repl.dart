@@ -23,13 +23,17 @@ int _escParam = 0; // for keys like 2~, 3~
 int _escMod = 0;
 bool _insertMode = false;
 
+bool _searchMode = false;
+String _savedLine = '';
+int _savedCursor = 0;
+
 bool isRunning = false;
 
 void start(ReplListener listener, {
   bool raw = false,
   String prompt = "> "}) {
   _prompt = prompt;
-  
+
   isRunning = true;
   setRawMode(raw: true);
 
@@ -39,7 +43,7 @@ void start(ReplListener listener, {
 
     if (!raw) _handleBytes(bytes);
     final flush = raw || _flush;
-    
+
     listener(bytes, _line, flush);
     if (flush && isRunning) _clearLine();
   });
@@ -74,10 +78,15 @@ void _handleBytes(List<int> bytes) {
   _flush = false;
   _escState = 0;
 
+  if (bytes.length == 1 && bytes[0] == 27) {
+    _onESC();
+    return;
+  }
+
   for (var b in bytes) {
     // Escaped characters (arrows, Home, End, etc.)
     if (_handleEscape(b)) continue;
-    
+
     // Visual chars (ASCII, backspace, linefeed, etc.)
     if (_handleNormalByte(b)) continue;
 
@@ -147,13 +156,13 @@ bool _handleEscape(int b) {
     _escState = 0;
     return true;
   }
-  
+
   if (_escState == 4 && b >= 48 && b <= 57) {
     _escMod = b - 48;
     _escState = 5;
     return true;
   }
-  
+
   if (_escState == 5) {
     if (_escParam == 1 && _escMod == 5) {
       if (b == 68) _onCtrlLeft();
@@ -178,19 +187,19 @@ bool _handleNormalByte(int b) {
   // CR (Windows Enter)
   if (b == 13) {
     _lastWasCR = true;
-    _flushLine();
+    _onLine();
     return true;
   }
 
   // LF (Unix Enter or Ctrl/Shift+Enter on Windows)
   if (b == 10) {
-    _flushLine();
+    _onLine();
     return true;
   }
 
   // BACKSPACE (Windows = 8, Unix = 127)
   if (b == 8 || b == 127) {
-    _handleBackspace();
+    _onBackspace();
     return true;
   }
 
@@ -199,7 +208,7 @@ bool _handleNormalByte(int b) {
     _insertChar(b);
     return true;
   }
-  
+
   return false;
 }
 
@@ -210,6 +219,10 @@ void _handleControlByte(int byte) {
   }
   if (byte == 17) { // Ctrl+Q
     _quit();
+    return;
+  }
+  if (byte == 18) { // Ctrl+R
+    _onCtrlR();
     return;
   }
   if (byte == 23) { // Ctrl+W & Ctrl+Backspace
@@ -243,6 +256,11 @@ void _quit() {
 
 void _break() {
   const msg = "press ctrl+c again to exit... (\$)\r";
+
+  if (_searchMode) {
+    _cancelSearch();
+    return;
+  }
 
   if (!_waitingForSecond) {
     _waitingForSecond = true;
@@ -278,19 +296,22 @@ void _insertChar(int b) {
   if (_insertMode && _cursor < _line.length) {
     _line[_cursor++] = b; // overwrite
     _write(String.fromCharCode(b));
-    return;
+    
+  } else {
+    // normal insert mode
+    _line.insert(_cursor, b);
+    _cursor++;
+  
+    final tail = utf8.decode(_line.sublist(_cursor));
+    _write(String.fromCharCode(b) + tail);
+  
+    if (tail.isNotEmpty) {
+      _write('\x1B[${tail.length}D');
+    }
   }
-
-  // normal insert mode
-  _line.insert(_cursor, b);
-  _cursor++;
-
-  final tail = utf8.decode(_line.sublist(_cursor));
-  _write(String.fromCharCode(b) + tail);
-
-  if (tail.isNotEmpty) {
-    _write('\x1B[${tail.length}D');
-  }
+  
+  if (_searchMode)
+    _updateSearchUI();
 }
 
 void _clearScreen() {
@@ -311,43 +332,96 @@ void _clearLine() {
   _cursor = 0;
 }
 
-void _handleBackspace() {
-  if (_cursor == 0) return;
-
-  _cursor--;
-  _line.removeAt(_cursor);
-
-  // Move cursor left
-  _write('\x1B[D');
-
-  // Rewrite tail
-  final tail = utf8.decode(_line.sublist(_cursor));
-  _write(tail + ' ');
-
-  // Move cursor back
-  final moveBack = tail.length + 1;
-  _write('\x1B[${moveBack}D');
-}
-
-void _flushLine() {
-  final text = utf8.decode(_line).trim();
-  _cursor = 0;
-
-  if (text.isNotEmpty && (_history.isEmpty || _history.last != text))
-    _history.add(text);
-  
-  _historyIndex = -1;
-
-  _write('\n');
-  _flush = true;
-}
-
 void _loadHistoryEntry() {
   _clearLine();
   final entry = _history[_historyIndex];
   _line = List.from(entry.codeUnits);
   _cursor = _line.length;
   _write(entry);
+}
+
+String _findBestMatch(String query) {
+  if (query.isEmpty) return '';
+
+  for (int i = _history.length - 1; i > -1; i--) {
+    if (_history[i].contains(query))
+      return _history[i];
+  }
+
+  return '';
+}
+
+void _acceptSearch() {
+  final query = utf8.decode(_line);
+  final match = _findBestMatch(query);
+
+  _searchMode = false;
+
+  if (match.isNotEmpty) {
+    _line = List.from(match.codeUnits);
+    _cursor = _line.length;
+  } else {
+    _line.clear();
+    _cursor = 0;
+  }
+
+  _clearSearchUI();
+  _redrawLine();
+}
+
+void _cancelSearch() {
+  _searchMode = false;
+
+  _line = List.from(_savedLine.codeUnits);
+  _cursor = _savedCursor;
+
+  _clearSearchUI();
+  _redrawLine();
+}
+
+void _showSearchResult() {
+  final query = utf8.decode(_line);
+  final match = _findBestMatch(query);
+
+  // Move to next line
+  _write('\n\x1B[2K');
+
+  if (match.isEmpty) {
+    _write("\x1B[90m- no match -\x1B[0m");
+  } else {
+    _write('\x1B[30m$match\x1B[0m');
+  }
+
+  // Move back to search line
+  _write('\x1B[A');
+  _redrawLine();
+}
+
+void _showSearchHeader() {
+  _write("\r\x1B[2K[ Search Mode - press ESC to exit ]\n");
+}
+
+void _clearSearchHeader() {
+  _write(
+    '\x1B[A'    // back to header
+    '\r\x1B[2K' // clear header
+  );
+}
+
+void _updateSearchUI() {
+  _clearSearchHeader();  // wipe old header
+  _showSearchHeader();   // print header
+  _redrawLine();         // print query
+  _showSearchResult();   // print result
+}
+
+void _clearSearchUI() {
+  _write(
+    '\r\x1B[2K' // clear search input
+    '\n\x1B[2K' // go down clear match
+    '\x1B[2A'   // back to header
+    '\r\x1B[2K' // clear header
+  );
 }
 
 void _redrawLine() {
@@ -375,6 +449,51 @@ void _redrawCursor() {
   final moveBack = _line.length - _cursor;
   if (moveBack > 0) {
     _write('\x1B[${moveBack}D');
+  }
+}
+
+void _onBackspace() {
+  if (_cursor == 0) return;
+
+  _cursor--;
+  _line.removeAt(_cursor);
+
+  // Move cursor left
+  _write('\x1B[D');
+
+  // Rewrite tail
+  final tail = utf8.decode(_line.sublist(_cursor));
+  _write(tail + ' ');
+
+  // Move cursor back
+  final moveBack = tail.length + 1;
+  _write('\x1B[${moveBack}D');
+  
+  if (_searchMode)
+    _updateSearchUI();
+}
+
+void _onLine() {
+  if (_searchMode) {
+    _acceptSearch();
+    return;
+  }
+
+  final text = utf8.decode(_line).trim();
+  _cursor = 0;
+
+  if (text.isNotEmpty && (_history.isEmpty || _history.last != text))
+    _history.add(text);
+
+  _historyIndex = -1;
+
+  _write('\n');
+  _flush = true;
+}
+
+void _onESC() {
+  if (_searchMode) {
+    _cancelSearch();
   }
 }
 
@@ -450,6 +569,9 @@ void _onDelete() {
 
   // Move cursor back
   _write('\x1B[${tail.length + 1}D');
+  
+  if (_searchMode)
+    _updateSearchUI();
 }
 
 void _onCtrlRight() {
@@ -498,7 +620,12 @@ void _onCtrlBackspace() {
   _line.removeRange(start, _cursor);
   _cursor = start;
 
-  _redrawLine();
+  
+  if (_searchMode)
+    _updateSearchUI();
+    
+  else 
+    _redrawLine();
 }
 
 void _onCtrlDelete() {
@@ -514,5 +641,28 @@ void _onCtrlDelete() {
 
   _line.removeRange(_cursor, end);
 
+  if (_searchMode)
+    _updateSearchUI();
+    
+  else 
+    _redrawLine();
+}
+
+void _onCtrlR() {
+  if (_searchMode) {
+    _cancelSearch();
+    return;
+  }
+  
+  _searchMode = true;
+
+  _savedLine = utf8.decode(_line);
+  _savedCursor = _cursor;
+
+  _line.clear();
+  _cursor = 0;
+
+  _showSearchHeader();
   _redrawLine();
+  _showSearchResult();
 }
