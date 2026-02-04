@@ -48,6 +48,12 @@ platforms:
 
 build platforms and complete _libraryPath getter in `fmath.dart` file,
 
+## C Main version
+
+write the main version in c
+and use c interop in other languages
+only rewrite it in other language when it highly used yet have no c interop
+
 ## write Help message
 
 write **help message** for each *builtin function*,
