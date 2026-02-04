@@ -6,12 +6,11 @@ import 'shell/interpreter.dart';
 import 'shell/run.dart';
 import 'utils/fmath.dart';
 
-void main() async {
+void main(List<String> args) async {
   loadFMathLib();
   initCompletions();
   
-  const filePath = "examples/theme.tstm";
-  
+  final String? filePath = args.isNotEmpty ? args[0] : null;
   final out = StringBuffer();
   final reporter = ErrorReporter(
     colored: true,
@@ -20,10 +19,8 @@ void main() async {
     printer: (s) => out.writeln(s),
   );
   
-  bool runFile = false;
 
-  // ignore: dead_code
-  if (runFile) {
+  if (filePath != null) {
     final runner = await TstmRun.from(filePath, reporter: reporter, buffer: out);
     final time = TstmRun.recordTime(() => runner?.run(printResult: false));
   
