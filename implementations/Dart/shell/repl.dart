@@ -101,6 +101,11 @@ void _handleBytes(List<int> bytes) {
   _lastWasCR = false;
   _flush = false;
   _escState = 0;
+  
+  if (_waitingForSecond) {
+    if (bytes[0] == 3) _break();
+    return;
+  }
 
   if (bytes.length == 1 && bytes[0] == 27) {
     _onESC();
@@ -237,41 +242,42 @@ bool _handleNormalByte(int b) {
 }
 
 void _handleControlByte(int byte) {
-  if (byte == 9) { // Tab
-    _onTab();
-    return;
-  }
-  if (byte == 0) { // Ctrl+Space
-    _onCtrlSpace();
-    return;
-  }
-  if (byte == 3) { // Ctrl+C
-    _break();
-    return;
-  }
-  if (byte == 17) { // Ctrl+Q
-    _quit();
-    return;
-  }
-  if (byte == 18) { // Ctrl+R
-    _onCtrlR();
-    return;
-  }
-  if (byte == 23) { // Ctrl+W & Ctrl+Backspace
-    _onCtrlBackspace();
-    return;
-  }
-  if (byte == 12) { // Ctrl+L
-    _clearScreen();
-    return;
-  }
-  if (byte == 1) { // Ctrl+A
-    _onHome();
-    return;
-  }
-  if (byte == 5) { // Ctrl+E
-    _onEnd();
-    return;
+  switch (byte) {
+    case 9: // Tab
+      _onTab();
+      break;
+    
+    case 0: // Ctrl+Space
+      _onCtrlSpace();
+      break;
+    
+    case 3: // Ctrl+C
+      _break();
+      break;
+    
+    case 17: // Ctrl+Q
+      _quit();
+      break;
+    
+    case 18: // Ctrl+R
+      _onCtrlR();
+      break;
+    
+    case 23: // Ctrl+W & Ctrl+Backspace
+      _onCtrlBackspace();
+      break;
+    
+    case 12: // Ctrl+L
+      _clearScreen();
+      break;
+    
+    case 1: // Ctrl+A
+      _onHome();
+      break;
+    
+    case 5: // Ctrl+E
+      _onEnd();
+      break;
   }
 }
 
@@ -280,41 +286,41 @@ bool _isWhitespace(int b) =>
   b == 32 || b == 9 || b == 10 || b == 13;
 
 void _exit() {
+  setRawMode(raw: false);
   exit(0);
 }
 
 void _quit() {
   isRunning = false;
-  setRawMode(raw: false);
+  _sub?.cancel();
   _exit();
 }
 
 void _break() {
-  const msg = "press ctrl+c again to exit... (\$)\r";
+  const msg = "press ctrl+c again to exit...";
 
   if (_searchMode) {
     _cancelSearch();
     return;
   }
-
+  
   if (!_waitingForSecond) {
     _waitingForSecond = true;
     int remaining = 3;
 
-    _write('\n');
-    _write(msg.replaceFirst('\$', '$remaining', msg.length - 3));
+    _write('\n$msg ($remaining)');
     _cancelTimer = Timer.periodic(Duration(seconds: 1), (t) {
       remaining--;
       if (remaining > 0) {
-        _write(msg.replaceFirst('\$', '$remaining', msg.length - 3));
+        _write('\r$msg ($remaining)');
 
       } else {
         t.cancel();
         _waitingForSecond = false;
 
-        // Clear the line
-        _write(" " * (msg.length) + "\r");
-        _write(_prompt);
+        // Clear line and move up then redraw line
+        _write('\r\x1B[2K\x1B[A');
+        _redrawLine();
       }
     });
 
@@ -323,7 +329,8 @@ void _break() {
 
   // Clear & Exit
   _cancelTimer.cancel();
-  _write(" " * (msg.length) + "\r");
+  _sub?.cancel();
+  _write('\r\x1B[2K');
   _exit();
 }
 
@@ -350,8 +357,7 @@ void _insertChar(int b) {
 
 void _clearScreen() {
   // Clear Screen and Move cursor to home
-  _write('\x1B[2J\x1B[H');
-  _write(_prompt);
+  _write('\x1B[2J\x1B[H$_prompt');
 
   _line.clear();
   _cursor = 0;
@@ -359,8 +365,7 @@ void _clearScreen() {
 
 void _clearLine() {
   // Move cursor to start and Clear line
-  _write('\r\x1B[2K');
-  _write(_prompt);
+  _write('\r\x1B[2K$_prompt');
 
   _line.clear();
   _cursor = 0;
