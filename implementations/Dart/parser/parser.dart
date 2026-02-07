@@ -16,34 +16,34 @@ class Parser {
   Token get _current => _pos < tokens.length
     ? tokens[_pos] : tokens[tokens.length - 1];
 
-  Token get _prev => 
+  Token get _prev =>
     0 <= _pos - 1 && _pos - 1 < tokens.length
       ? tokens[_pos - 1]
       : tokens[0];
 
   bool get _isAtEnd => _current.type == TokenType.eof;
 
-  Position _p(int start) => (start: start, length: _prev.end - start); 
-  
+  Position _p(int start) => (start: start, length: _prev.end - start);
+
   List<Expr> interpret(List<Token> tokens) {
     final I = _pos;
     _pos = this.tokens.length;
     // add new tokens at end
     this.tokens.addAll(tokens);
-    
+
     final expressions = <Expr>[];
     while (!_isAtEnd) {
       final expr = _expression();
       expressions.add(expr);
     }
-      
-    
+
+
     // remove new tokens from end
     this.tokens.removeRange(this.tokens.length - tokens.length, this.tokens.length - 1);
     _pos = I;
     return expressions;
   }
-  
+
   Program parse() {
     _pos = 0;
     List<Declaration> declarations = [];
@@ -63,7 +63,7 @@ class Parser {
   Declaration? _parseDecl() {
     final start = _current.start;
 
-    String? name = null; 
+    String? name = null;
     if (_is(TokenType.identifier))
       name = _advance().lexeme;
 
@@ -102,17 +102,17 @@ class Parser {
     _ignoreSemicolons();
     return expr;
   }
-  
+
   Expr _inlineDecl() {
     if (!(_is(TokenType.identifier) && _peek(1).type == TokenType.colon))
       return _ternary();
-    
+
     final start = _current.start;
     final name = _advance().lexeme;
     _advance(); // colon
-    
+
     final expr = _expression();
-    
+
     return InlineDeclExpr(name, expr, _p(start));
   }
 
@@ -420,12 +420,12 @@ class Parser {
         return expr;
 
       default:
-        _error("Unexpected token: ${_current.lexeme}");
+        _error("Unexpected token: '${cur.lexeme}'", cur.start, cur.len);
         return InvalidExpr.instance;
     }
 
   }
-  
+
   void _ignoreSemicolons() {
     while (_is(TokenType.semicolon)) _pos++;
   }
