@@ -4,68 +4,98 @@ import 'dart:io';
 
 import '../utils/rawmode.dart';
 
-typedef ReplListener = void Function(List<int> bytes, List<int> buffer, bool flush);
+typedef ReplListener = void Function(
+  List<int> bytes, List<int> buffer, bool flush);
 
-late Timer _cancelTimer;
-bool _waitingForSecond = false;
+// Stdin subscription
 StreamSubscription<List<int>>? _sub;
 
-final List<String> _history = [];
+// Accept Operation
+Timer? _cancelTimer;
+bool _waitingForSecond = false;
+
+// Current line
 List<int> _line = [];
 int _cursor = 0;
-int _historyIndex = -1; // -1 means “not browsing history”
 
-String _prompt = "> ";
+// Bytes Handling variables
 bool _lastWasCR = false;
 bool _flush = false;
 int _escState = 0; // 0 = normal, 1 = ESC, 2 = ESC [
 int _escParam = 0; // for keys like 2~, 3~
 int _escMod = 0;
+
+// Insert Mode
 bool _insertMode = false;
 
+// History variables
+final List<String> _history = [];
+int _historyIndex = -1; // -1 means “not browsing history”
+
+// Search Mode variables
 bool _searchMode = false;
 String _savedLine = '';
 int _savedCursor = 0;
 
+// Completions variables
 String? _suggestion;
 final List<String> _completions = [];
 
 
-bool isRunning = false;
+String _prompt = "> ";
+bool _isRunning = false;
+bool _isPaused = true;
+
+String get prompt => _prompt;
+bool get isRunning => _isRunning;
+bool get isPaused => _isPaused;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Public Api
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void start(ReplListener listener, {
-  bool raw = false,
   String prompt = "> "}) {
   _prompt = prompt;
 
-  isRunning = true;
+  _isRunning = true;
+  _isPaused = false;
   setRawMode(raw: true);
 
   _write(_prompt);
   _sub = stdin.listen((bytes) {
-    if (!isRunning) return;
+    if (!_isRunning) return;
 
-    if (!raw) _handleBytes(bytes);
-    final flush = raw || _flush;
+    _lastWasCR = false;
+    _flush = false;
+    _escState = 0;
 
-    listener(bytes, _line, flush);
-    if (flush && isRunning) _clearLine();
+    if (_isPaused || _waitingForSecond) {
+      _handleEmergency(bytes);
+    } else {
+      _handleBytes(bytes);
+    }
+
+    listener(bytes, _line, _flush);
+    if (_flush && _isRunning && !_isPaused) _clearLine();
   });
 }
 
 void cancel() {
   _sub?.cancel();
-  isRunning = false;
+  _sub = null;
+  setRawMode(raw: false);
+
+  _isRunning = false;
+  _isPaused = true;
 }
 
 void pasue() {
-  _sub?.pause();
-  isRunning = false;
+  _isPaused = true;
 }
 
 void resume() {
-  _sub?.resume();
-  isRunning = true;
+  _isPaused = false;
 }
 
 void changePrompt(String prompt) {
@@ -93,21 +123,63 @@ void clearCompletions() {
   _completions.clear();
 }
 
-void _write(Object object) {
-  stdout.write(object);
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Helpers
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@pragma('vm:perfer-inline')
+void _write(Object object) => stdout.write(object);
+
+@pragma('vm:perfer-inline')
+bool _isWhitespace(int b) =>
+  b == 32 || b == 9 || b == 10 || b == 13;
+
+@pragma('vm:perfer-inline')
+void _exit() {
+  setRawMode(raw: false);
+  exit(0);
 }
 
-void _handleBytes(List<int> bytes) {
-  _lastWasCR = false;
-  _flush = false;
-  _escState = 0;
-  
-  if (_waitingForSecond) {
-    if (bytes[0] == 3) _break();
-    return;
+String _findBestMatch(String query) {
+  if (query.isEmpty) return '';
+
+  for (int i = _history.length - 1; i > -1; i--) {
+    if (_history[i].contains(query))
+      return _history[i];
   }
 
-  if (bytes.length == 1 && bytes[0] == 27) {
+  return '';
+}
+
+String? _currentWord() {
+  if (_line.isEmpty) return null;
+
+  int start = _line.length;
+  while (start > 0 && !_isWhitespace(_line[start-1])) --start;
+
+  if (_cursor < start) return null;
+
+  return utf8.decode(_line.sublist(start));
+}
+
+String? _findSuggestion(String? word) {
+  if (word == null || word.isEmpty) return null;
+
+  for (final c in _completions) {
+    if (c.startsWith(word) && c.length > word.length)
+      return c.substring(word.length); // only the unwritten part
+  }
+
+  return null;
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Bytes Mapping
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+void _handleBytes(List<int> bytes) {
+  if (bytes.length == 1 &&
+    bytes[0] == 27) {
     _onESC();
     return;
   }
@@ -246,93 +318,58 @@ void _handleControlByte(int byte) {
     case 9: // Tab
       _onTab();
       break;
-    
+
     case 0: // Ctrl+Space
       _onCtrlSpace();
       break;
-    
+
     case 3: // Ctrl+C
-      _break();
+      _onCtrlC();
       break;
-    
+
     case 17: // Ctrl+Q
-      _quit();
+      _onCtrlQ();
       break;
-    
+
     case 18: // Ctrl+R
       _onCtrlR();
       break;
-    
+
     case 23: // Ctrl+W & Ctrl+Backspace
       _onCtrlBackspace();
       break;
-    
+
     case 12: // Ctrl+L
-      _clearScreen();
+      _onCtrlL();
       break;
-    
+
     case 1: // Ctrl+A
-      _onHome();
+      _onCtrlA();
       break;
-    
+
     case 5: // Ctrl+E
-      _onEnd();
+      _onCtrlE();
       break;
   }
 }
 
-@pragma('vm:perfer-inline')
-bool _isWhitespace(int b) =>
-  b == 32 || b == 9 || b == 10 || b == 13;
+void _handleEmergency(List<int> bytes) {
+  for (final b in bytes) {
+    switch (b) {
+      case 3: // Ctrl+C
+        _onCtrlC();
+        return;
 
-void _exit() {
-  setRawMode(raw: false);
-  exit(0);
-}
-
-void _quit() {
-  isRunning = false;
-  _sub?.cancel();
-  _exit();
-}
-
-void _break() {
-  const msg = "press ctrl+c again to exit...";
-
-  if (_searchMode) {
-    _cancelSearch();
-    return;
+      case 17: // Ctrl+Q
+        _onCtrlQ();
+        return;
+    }
   }
-  
-  if (!_waitingForSecond) {
-    _waitingForSecond = true;
-    int remaining = 3;
-
-    _write('\n$msg ($remaining)');
-    _cancelTimer = Timer.periodic(Duration(seconds: 1), (t) {
-      remaining--;
-      if (remaining > 0) {
-        _write('\r$msg ($remaining)');
-
-      } else {
-        t.cancel();
-        _waitingForSecond = false;
-
-        // Clear line and move up then redraw line
-        _write('\r\x1B[2K\x1B[A');
-        _redrawLine();
-      }
-    });
-
-    return;
-  }
-
-  // Clear & Exit
-  _cancelTimer.cancel();
-  _sub?.cancel();
-  _write('\r\x1B[2K');
-  _exit();
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Line & Cursor Update
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void _insertChar(int b) {
   if (_insertMode && _cursor < _line.length) {
@@ -381,137 +418,6 @@ void _lineUpdate() {
   }
 }
 
-void _loadHistoryEntry() {
-  _clearLine();
-  final entry = _history[_historyIndex];
-  _line = List.from(entry.codeUnits);
-  _cursor = _line.length;
-  _write(entry);
-}
-
-String _findBestMatch(String query) {
-  if (query.isEmpty) return '';
-
-  for (int i = _history.length - 1; i > -1; i--) {
-    if (_history[i].contains(query))
-      return _history[i];
-  }
-
-  return '';
-}
-
-void _acceptSearch() {
-  final query = utf8.decode(_line);
-  final match = _findBestMatch(query);
-
-  _searchMode = false;
-
-  if (match.isNotEmpty) {
-    _line = List.from(match.codeUnits);
-    _cursor = _line.length;
-  } else {
-    _line.clear();
-    _cursor = 0;
-  }
-
-  _clearSearchUI();
-  _redrawLine();
-}
-
-void _cancelSearch() {
-  _searchMode = false;
-
-  _line = List.from(_savedLine.codeUnits);
-  _cursor = _savedCursor;
-
-  _clearSearchUI();
-  _redrawLine();
-}
-
-void _showSearchResult() {
-  final query = utf8.decode(_line);
-  final match = _findBestMatch(query);
-
-  // Move to next line
-  _write('\n\x1B[2K');
-
-  if (match.isEmpty) {
-    _write("\x1B[30m- no match -\x1B[0m");
-  } else {
-    _write('\x1B[90m$match\x1B[0m');
-  }
-
-  // Move back to search line
-  _write('\x1B[A');
-  _redrawLine();
-}
-
-void _showSearchHeader() {
-  _write("\r\x1B[2K[ Search Mode - press ESC to exit ]\n");
-}
-
-void _clearSearchHeader() {
-  _write(
-    '\x1B[A'    // back to header
-    '\r\x1B[2K' // clear header
-  );
-}
-
-void _updateSearchUI() {
-  _clearSearchHeader();  // wipe old header
-  _showSearchHeader();   // print header
-  _redrawLine();         // print query
-  _showSearchResult();   // print result
-}
-
-void _clearSearchUI() {
-  _write(
-    '\r\x1B[2K' // clear search input
-    '\n\x1B[2K' // go down clear match
-    '\x1B[2A'   // back to header
-    '\r\x1B[2K' // clear header
-  );
-}
-
-String? _currentWord() {
-  if (_line.isEmpty) return null;
-
-  int start = _line.length;
-  while (start > 0 && !_isWhitespace(_line[start-1])) --start;
-
-  if (_cursor < start) return null;
-
-  return utf8.decode(_line.sublist(start));
-}
-
-String? _findSuggestion(String? word) {
-  if (word == null || word.isEmpty) return null;
-
-  for (final c in _completions) {
-    if (c.startsWith(word) && c.length > word.length)
-      return c.substring(word.length); // only the unwritten part
-  }
-
-  return null;
-}
-
-void _updateSuggestions() {
-  final word = _currentWord();
-  _suggestion = _findSuggestion(word);
-}
-
-void _applySuggestion() {
-  if (_suggestion == null) return;
-
-  for (var c in _suggestion!.codeUnits) {
-    _line.insert(_cursor, c);
-    _cursor++;
-  }
-
-  _suggestion = null;
-  _redrawLine();
-}
-
 void _redrawLine() {
   final text = utf8.decode(_line);
 
@@ -544,24 +450,147 @@ void _redrawCursor() {
   }
 }
 
-void _onBackspace() {
-  if (_cursor == 0) return;
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  History
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  _cursor--;
-  _line.removeAt(_cursor);
-  final tail = utf8.decode(_line.sublist(_cursor));
-
-  _write(
-    '\x1B[D'    // Move cursor left
-    '$tail '    // Rewrite tail
-  );
-
-  // Move cursor back
-  final moveBack = tail.length + 1;
-  _write('\x1B[${moveBack}D');
-
-  _lineUpdate();
+void _loadHistoryEntry() {
+  _clearLine();
+  final entry = _history[_historyIndex];
+  _line = List.from(entry.codeUnits);
+  _cursor = _line.length;
+  _write(entry);
 }
+
+void _historyUp() {
+  if (_history.isEmpty) return;
+
+  if (_historyIndex == -1) {
+    _historyIndex = _history.length - 1;
+  } else if (_historyIndex > 0) {
+    _historyIndex--;
+  }
+
+  _loadHistoryEntry();
+}
+
+void _historyDown() {
+  if (_history.isEmpty) return;
+
+  if (_historyIndex == -1) return; // already at newest
+
+  _historyIndex++;
+
+  if (_historyIndex >= _history.length) {
+    _historyIndex = -1;
+    _clearLine();
+    return;
+  }
+
+  _loadHistoryEntry();
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Search
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+void _acceptSearch() {
+  final query = utf8.decode(_line);
+  final match = _findBestMatch(query);
+
+  _searchMode = false;
+
+  if (match.isNotEmpty) {
+    _line = List.from(match.codeUnits);
+    _cursor = _line.length;
+  } else {
+    _line.clear();
+    _cursor = 0;
+  }
+
+  _clearSearchUI();
+  _redrawLine();
+}
+
+void _cancelSearch() {
+  _searchMode = false;
+
+  _line = List.from(_savedLine.codeUnits);
+  _cursor = _savedCursor;
+
+  _clearSearchUI();
+  _redrawLine();
+}
+
+void _updateSearchUI() {
+  _clearSearchHeader();  // wipe old header
+  _showSearchHeader();   // print header
+  _redrawLine();         // print query
+  _showSearchResult();   // print result
+}
+
+void _clearSearchUI() {
+  _write(
+    '\r\x1B[2K' // clear search input
+    '\n\x1B[2K' // go down clear match
+    '\x1B[2A'   // back to header
+    '\r\x1B[2K' // clear header
+  );
+}
+
+void _showSearchHeader() {
+  _write("\r\x1B[2K[ Search Mode - press ESC to exit ]\n");
+}
+
+void _showSearchResult() {
+  final query = utf8.decode(_line);
+  final match = _findBestMatch(query);
+
+  // Move to next line
+  _write('\n\x1B[2K');
+
+  if (match.isEmpty) {
+    _write("\x1B[30m- no match -\x1B[0m");
+  } else {
+    _write('\x1B[90m$match\x1B[0m');
+  }
+
+  // Move back to search line
+  _write('\x1B[A');
+  _redrawLine();
+}
+
+void _clearSearchHeader() {
+  _write(
+    '\x1B[A'    // back to header
+    '\r\x1B[2K' // clear header
+  );
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Completions
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+void _applySuggestion() {
+  if (_suggestion == null) return;
+
+  for (var c in _suggestion!.codeUnits) {
+    _line.insert(_cursor, c);
+    _cursor++;
+  }
+
+  _suggestion = null;
+  _redrawLine();
+}
+
+void _updateSuggestions() {
+  final word = _currentWord();
+  _suggestion = _findSuggestion(word);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Special Keys
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void _onLine() {
   if (_searchMode) {
@@ -585,6 +614,39 @@ void _onLine() {
   _flush = true;
 }
 
+void _onBackspace() {
+  if (_cursor == 0) return;
+
+  _cursor--;
+  _line.removeAt(_cursor);
+  final tail = utf8.decode(_line.sublist(_cursor));
+
+  _write(
+    '\x1B[D'    // Move cursor left
+    '$tail '    // Rewrite tail
+  );
+
+  // Move cursor back
+  final moveBack = tail.length + 1;
+  _write('\x1B[${moveBack}D');
+
+  _lineUpdate();
+}
+
+void _onDelete() {
+  if (_cursor >= _line.length) return;
+
+  _line.removeAt(_cursor);
+  final tail = utf8.decode(_line.sublist(_cursor));
+
+  _write(
+    '$tail '                    // Rewrite tail
+    '\x1B[${tail.length + 1}D'  // Move cursor back
+  );
+
+  _lineUpdate();
+}
+
 void _onESC() {
   if (_searchMode) {
     _cancelSearch();
@@ -593,48 +655,6 @@ void _onESC() {
 
 void _onTab() {
   _applySuggestion();
-}
-
-void _onArrowUp() {
-  if (_history.isEmpty) return;
-
-  if (_historyIndex == -1) {
-    _historyIndex = _history.length - 1;
-  } else if (_historyIndex > 0) {
-    _historyIndex--;
-  }
-
-  _loadHistoryEntry();
-}
-
-void _onArrowDown() {
-  if (_history.isEmpty) return;
-
-  if (_historyIndex == -1) return; // already at newest
-
-  _historyIndex++;
-
-  if (_historyIndex >= _history.length) {
-    _historyIndex = -1;
-    _clearLine();
-    return;
-  }
-
-  _loadHistoryEntry();
-}
-
-void _onArrowRight() {
-  if (_cursor < _line.length) {
-    _cursor++;
-    _write('\x1B[C'); // move cursor right
-  }
-}
-
-void _onArrowLeft() {
-  if (_cursor > 0) {
-    _cursor--;
-    _write('\x1B[D'); // move cursor left
-  }
 }
 
 void _onHome() {
@@ -656,19 +676,35 @@ void _onInsert() {
   _insertMode = !_insertMode;
 }
 
-void _onDelete() {
-  if (_cursor >= _line.length) return;
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Arrow Keys
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  _line.removeAt(_cursor);
-  final tail = utf8.decode(_line.sublist(_cursor));
-
-  _write(
-    '$tail '                    // Rewrite tail
-    '\x1B[${tail.length + 1}D'  // Move cursor back
-  );
-
-  _lineUpdate();
+void _onArrowUp() {
+  _historyUp();
 }
+
+void _onArrowDown() {
+  _historyDown();
+}
+
+void _onArrowRight() {
+  if (_cursor < _line.length) {
+    _cursor++;
+    _write('\x1B[C'); // move cursor right
+  }
+}
+
+void _onArrowLeft() {
+  if (_cursor > 0) {
+    _cursor--;
+    _write('\x1B[D'); // move cursor left
+  }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//   Ctrl + Keys
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void _onCtrlRight() {
   if (_cursor >= _line.length) return;
@@ -733,6 +769,63 @@ void _onCtrlDelete() {
   _line.removeRange(_cursor, end);
 
   _lineUpdate();
+}
+
+void _onCtrlQ() {
+  _isRunning = false;
+  _sub?.cancel();
+  _exit();
+}
+
+void _onCtrlC() {
+  const msg = "press ctrl+c again to exit...";
+
+  if (_searchMode) {
+    _cancelSearch();
+    return;
+  }
+
+  if (!_waitingForSecond) {
+    _waitingForSecond = true;
+    int remaining = 3;
+
+    _write('\n$msg ($remaining)');
+    _cancelTimer = Timer.periodic(Duration(seconds: 1), (t) {
+      remaining--;
+      if (remaining > 0) {
+        _write('\r$msg ($remaining)');
+
+      } else {
+        t.cancel();
+        _waitingForSecond = false;
+
+        // Clear line and move up then redraw line
+        _write('\r\x1B[2K\x1B[A');
+        _redrawLine();
+      }
+    });
+
+    return;
+  }
+
+  // Clear & Exit
+  _cancelTimer?.cancel();
+  _cancelTimer = null;
+  _sub?.cancel();
+  _write('\r\x1B[2K');
+  _exit();
+}
+
+void _onCtrlA() {
+  _onHome();
+}
+
+void _onCtrlE() {
+  _onEnd();
+}
+
+void _onCtrlL() {
+  _clearScreen();
 }
 
 void _onCtrlR() {
