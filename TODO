@@ -58,3 +58,38 @@ only rewrite it in other language when it highly used yet have no c interop
 
 write **help message** for each *builtin function*,
 use help/print.txt as reference
+
+## New Number kind (mask)
+
+prefix 0m 0M
+
+valid chars
+0-9 oir OIR
+
+How it work:
+
+it basically repeat
+O for repeat zero 0
+I for repeat one  1
+R for repeat part before
+
+
+**Examples:**
+
+0mO4I1 -> 0b00001
+0mi1O2 -> 0b100
+0mi3o1r5 -> 0b11101110111011101110
+0miiior5 -> 0b11101110111011101110
+0miiiorrrrr -> 0b11101110111011101110
+0moiir2oor3 -> 0b011011000110110001101100
+
+**Clear format:**
+
+OIIR2OOR3
+((0¹1²)²0²)³
+
+**What is For?:**
+
+ - easier to generate and understand masks
+ - new color masking trick
+ - better binary level control of colors and numbers
