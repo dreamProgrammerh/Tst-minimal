@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "platform.h"
+
 typedef uint8_t byte;
 
 typedef uint8_t u8;
@@ -15,5 +17,10 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
-typedef size_t usize;
-typedef long long isize;
+#if ARCH_is64BIT
+    typedef u64 usize;
+    typedef i64 isize;
+#elif ARCH_is32BIT
+    typedef u32 usize;
+    typedef i32 isize;
+#endif
