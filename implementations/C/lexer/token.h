@@ -117,7 +117,7 @@ typedef struct TokenList {
 } TokenList;
 
 static inline
-TokenList* toklist_new(usize capacity,
+TokenList* toklist_new(const usize capacity,
     void* (*alloc)(usize),
     void (*free)(void*)) {
     TokenList* tl = alloc(sizeof(*tl));
@@ -153,7 +153,7 @@ void toklist_free(TokenList* tl) {
 }
 
 static inline
-bool _toklist_setCapacity(TokenList* tl, usize capacity) {
+bool _toklist_setCapacity(TokenList* tl, const usize capacity) {
     Token* tokens = tl->alloc(capacity);
     if (!tokens) {
         printf("TokenList Error: Memory allocation failed during growing.\n");
@@ -198,14 +198,14 @@ bool _toklist_tryShrink(TokenList* tl) {
 }
 
 static inline
-Token* toklist_at(TokenList* tl, u32 index) {
+Token* toklist_at(const TokenList* tl, const u32 index) {
     if (tl->tokens == NULL || index >= tl->length) return NULL;
 
     return tl->tokens + index;
 }
 
 static inline
-bool toklist_set(TokenList* tl, u32 index, const Token tok) {
+bool toklist_set(const TokenList* tl, const u32 index, const Token tok) {
     if (tl->tokens == NULL || index >= tl->length) return false;
     
     tl->tokens[index] = tok;
@@ -223,7 +223,7 @@ void toklist_clear(TokenList* tl) {
 static inline
 bool toklist_push(TokenList* tl, const Token tok) {
     if (tl->tokens == NULL) return false;
-    _toklist_tryGrow(tl);
+    if (_toklist_tryGrow(tl)) return false;
 
     tl->tokens[tl->length++] = tok;
     return true;
