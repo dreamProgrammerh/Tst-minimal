@@ -1,7 +1,14 @@
 #pragma once
 
 #include "../utils/c23.h"
+#include "../utils/short-types.h"
 #include "../utils/platform.h"
+
+// String length of
+#define slenof(x) (sizeof(x) - 1)
+
+// Array length of
+#define lenof(x) (sizeof(x) / sizeof(x[0]))
 
 final char CL_whitespaces[] = " \t\v\r\f\n";
 final char CL_newline[2] = OS_NEWLINE;
@@ -104,6 +111,71 @@ char* CL_Operators3[] = {
 };
 
 static inline
-bool CL_isWhitespace(char c) {
+bool CL_isWhitespace(const char c) {
     return c == ' ' || c == '\t' || c == '\v' || c == '\r' || c == '\f' || c == '\n';
+}
+
+static inline
+bool CL_isOperator(const char c) {
+    for (u16 i = 0; i < lenof(CL_Operators1); i++) {
+        if (CL_Operators1[i] == c)
+            return true;
+    }
+
+    for (u16 i = 0; i < lenof(CL_Operators2); i++) {
+        if (CL_Operators2[i][0] == c)
+            return true;
+    }
+
+    for (u16 i = 0; i < lenof(CL_Operators3); i++) {
+        if (CL_Operators3[i][0] == c)
+            return true;
+    }
+
+    return false;
+}
+
+static inline
+bool CL_isAlpha(const char c) {
+    return 'a' <= (c | 32) && (c | 32) <= 'z';
+}
+
+static inline
+bool CL_isDigit(const char c) {
+    return '0' <= c && c <= '9';
+}
+
+static inline
+bool CL_isIdentifierStart(const char c) {
+    return CL_isAlpha(c) || c == '_';
+}
+
+static inline
+bool CL_isIdentifierPart(const char c) {
+    return CL_isAlpha(c) || CL_isDigit(c) || c == '_';
+}
+
+static inline
+bool CL_isNumberStart(const char c) {
+    return CL_isDigit(c) || c == '.';
+}
+
+static inline
+bool CL_isValidNumberBreak(const char c) {
+  return CL_isWhitespace(c) || CL_isOperator(c);
+}
+
+static inline
+bool CL_isOctDigit(const char c) {
+    return '0' <= c && c <= '7';
+}
+
+static inline
+bool CL_isBinDigit(const char c) {
+    return c == '0' || c == '1';
+}
+
+static inline
+bool CL_isHexDigit(const char c) {
+    return CL_isDigit(c) || ('a' <= (c | 32) && (c | 32) <= 'f');
 }
