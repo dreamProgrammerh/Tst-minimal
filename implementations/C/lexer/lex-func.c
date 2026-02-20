@@ -95,6 +95,10 @@ void _lex_skipComment(Lexer* lx) {
 Token _lex_color(Lexer* lx);
 Token _lex_identifier(Lexer* lx);
 Token _lex_number(Lexer* lx);
+Token _lex_hexNumber(Lexer* lx, u32 start);
+Token _lex_binaryNumber(Lexer* lx, u32 start);
+Token _lex_octalNumber(Lexer* lx, u32 start);
+Token _lex_decimalNumber(Lexer* lx, u32 start);
 
 Token _lex_nextTok(Lexer* lx) {
     _lex_skipWhitespace(lx);
@@ -301,6 +305,214 @@ Token _lex_identifier(Lexer* lx) {
         (str_t){ .data=lexeme, .length=lexLength }, start);
 }
 
-Token _lex_number(Lexer* lx) { // TODO
+Token _lex_number(Lexer* lx) {
+    const u32 start = lx->position;
+
+    // Check for base prefixes
+    if (LEXER_CH(lx) == '0' && lx->position + 1 < lx->src.length) {
+        // Next character
+        const char c = lx->src.data[lx->position + 1];
+
+        switch (c) {
+            case 'x': case 'X':
+                return _lex_hexNumber(lx, start);
+
+            case 'b': case 'B':
+                return _lex_binaryNumber(lx, start);
+
+            case 'o': case 'O':
+                return _lex_octalNumber(lx, start);
+
+            default:;
+        }
+    }
+
+    // Default to decimal (could be integer or float)
+    return _lex_decimalNumber(lx, start);
+}
+
+Token _lex_hexNumber(Lexer* lx, const u32 start) {
+    // Skip '0x' or '0X'
+    lx->position += 2;
+
+    if (_lex_isAtEnd(lx) || (CL_isValidNumberBreak(LEXER_CH(lx))
+        && LEXER_CH(lx) != CL_NumberSeparator)) {
+        _lex_error(lx, start, lx->position - start,
+            "Incomplete hex number: expected digits after 0x");
+        return INVALID_TOKEN;
+    }
+
+    bool separated = false;
+
+    while (!_lex_isAtEnd(lx)) {
+        const char c = LEXER_CH(lx);
+
+        if (c == CL_NumberSeparator) {
+            if (separated || lx->position + 1 >= lx->src.length) {
+                _lex_error(lx, lx->position, 1, "Invalid separator in hex number");
+                return INVALID_TOKEN;
+            }
+
+            separated = true;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isHexDigit(c)) {
+            separated = false;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isValidNumberBreak(c))
+            break;
+
+        _lex_error(lx, lx->position, 1,
+            "Invalid hex digit: '%c'", c);
+        return INVALID_TOKEN;
+    }
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+
+    lexeme[lexLength] = '\0';
+
+    // Must have at least one hex digit after 0x
+    if (lexLength <= 2 ||
+      !CL_isHexDigit(LEXER_CH(lx))) {
+        _lex_error(lx, start, lx->position - start, "Invalid hex number: '%s'", lexeme);
+        return INVALID_TOKEN;
+      }
+
+    return tok_new(tt_hex,
+        (str_t){ .data=lexeme, .length=lexLength }, start);
+}
+
+Token _lex_binaryNumber(Lexer* lx, const u32 start) {
+    // Skip '0b' or '0B'
+    lx->position += 2;
+
+    if (_lex_isAtEnd(lx) || (CL_isValidNumberBreak(LEXER_CH(lx))
+        && LEXER_CH(lx) != CL_NumberSeparator)) {
+        _lex_error(lx, start, lx->position - start,
+            "Incomplete binary number: expected digits after 0b");
+        return INVALID_TOKEN;
+    }
+
+    bool separated = false;
+
+    while (!_lex_isAtEnd(lx)) {
+        const char c = LEXER_CH(lx);
+
+        if (c == CL_NumberSeparator) {
+            if (separated || lx->position + 1 >= lx->src.length) {
+                _lex_error(lx, lx->position, 1,
+                    "Invalid separator in binary number");
+                return INVALID_TOKEN;
+            }
+
+            separated = true;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isBinDigit(c)) {
+            separated = false;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isValidNumberBreak(c))
+            break;
+
+        _lex_error(lx, lx->position, 1, "Invalid binary digit: %c'", c);
+        return INVALID_TOKEN;
+    }
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+
+    lexeme[lexLength] = '\0';
+
+    // Must have at least one binary digit after 0b
+    if (lexLength <= 2 ||
+      !CL_isBinDigit(LEXER_CH(lx))) {
+        _lex_error(lx, start, lx->position - start, "Invalid binary number: '%s'", lexeme);
+        return INVALID_TOKEN;
+      }
+
+    return tok_new(tt_bin,
+        (str_t){ .data=lexeme, .length=lexLength }, start);
+}
+
+Token _lex_octalNumber(Lexer* lx, const u32 start) {
+    // Skip '0o' or '0O'
+    lx->position += 2;
+
+    if (_lex_isAtEnd(lx) || (CL_isValidNumberBreak(LEXER_CH(lx))
+        && LEXER_CH(lx) != CL_NumberSeparator)) {
+        _lex_error(lx, start, lx->position - start,
+            "Incomplete hex number: expected digits after 0o");
+        return INVALID_TOKEN;
+    }
+
+    bool separated = false;
+
+    while (!_lex_isAtEnd(lx)) {
+        const char c = LEXER_CH(lx);
+
+        if (c == CL_NumberSeparator) {
+            if (separated || lx->position + 1 >= lx->src.length) {
+                _lex_error(lx, start, lx->position,
+                    "Invalid separator in octal number");
+                return INVALID_TOKEN;
+            }
+
+            separated = true;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isOctDigit(c)) {
+            separated = false;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isValidNumberBreak(c))
+            break;
+
+        _lex_error(lx, lx->position, 1, "Invalid octal digit: '%c'", c);
+        return INVALID_TOKEN;
+
+    }
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+
+    lexeme[lexLength] = '\0';
+
+    // Must have at least one octal digit after 0o
+    if (lexLength <= 2 ||
+      !CL_isOctDigit(LEXER_CH(lx))) {
+        _lex_error(lx, start, lx->position - start,
+            "Invalid octal number: '%s'", lexeme);
+        return INVALID_TOKEN;
+      }
+
+    return tok_new(tt_oct,
+        (str_t){ .data=lexeme, .length=lexLength }, start);
+}
+
+Token _lex_decimalNumber(Lexer* lx, const u32 start) { // TODO
     return INVALID_TOKEN;
 }
