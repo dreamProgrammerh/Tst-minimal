@@ -18,7 +18,12 @@ char _lex_current(const Lexer* lx) {
     return _lex_isAtEnd(lx) ? '\0' : lx->src.data[lx->position];;
 }
 
-bool _lex_error(Lexer* lx, char* msg, u32 start, u32 len) {
+char _lex_peek(const Lexer* lx, const u32 offset) {
+    return (lx->position + offset >= lx->src.length)
+        ? '\0' : lx->src.data[lx->position + offset];;
+}
+
+bool _lex_error(Lexer* lx, const u32 start, const u32 len, char* msg, ...) {
   return false;
 }
 
@@ -87,7 +92,9 @@ void _lex_skipComment(Lexer* lx) {
 // LEXER TOKENIZE
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Token _lex_hex(Lexer* lx);
+Token _lex_color(Lexer* lx);
+Token _lex_number(Lexer* lx);
+Token _lex_identifier(Lexer* lx);
 
 Token _lex_nextTok(Lexer* lx) {
     _lex_skipWhitespace(lx);
@@ -103,75 +110,166 @@ Token _lex_nextTok(Lexer* lx) {
 
     const str_t lexeme = (str_t) { .data = cstr, .length = 1};
 
+#define ifMatch(s) if (_lex_matcha(lx, s))
+#define tokenof(type) tok_new(type, lexeme, start)
+
+    if (CL_isNumberStart(c))
+        return _lex_number(lx);
+
+    if (CL_isIdentifierStart(c))
+        return _lex_identifier(lx);
+
+    if (CL_isWhitespace(_lex_peek(lx, 1)))
+        goto Single;
+
+    if (CL_isWhitespace(_lex_peek(lx, 2)))
+        goto Double;
+
+    // Handle triple char operators
+    ifMatch (CL_RotateLeft)
+        return tokenof(tt_rotLeft);
+
+    ifMatch (CL_RotateRight)
+        return tokenof(tt_rotRight);
+
+    ifMatch (CL_StrictEqual)
+        return tokenof(tt_strictEqual);
+
+    ifMatch (CL_StrictNotEqual)
+        return tokenof(tt_strictNotEqual);
+
+    ifMatch (CL_ApproxEqual)
+        return tokenof(tt_approxEqual);
+
+    ifMatch (CL_NotApproxEqual)
+        return tokenof(tt_notApproxEqual);
+
+    // Handle double char operators
+Double:
+    ifMatch (CL_ShiftLeft)
+        return tokenof(tt_shiftLeft);
+
+    ifMatch (CL_ShiftRight)
+        return tokenof(tt_shiftRight);
+
+    ifMatch (CL_IntDiv)
+        return tokenof(tt_intDiv);
+
+    ifMatch (CL_Power)
+        return tokenof(tt_power);
+
+    ifMatch (CL_EqualEqual)
+        return tokenof(tt_equalEqual);
+
+    ifMatch (CL_NotEqual)
+        return tokenof(tt_notEqual);
+
+    ifMatch (CL_LessEqual)
+        return tokenof(tt_lessEqual);
+
+    ifMatch (CL_GreaterEqual)
+        return tokenof(tt_greaterEqual);
+
+    ifMatch (CL_LogicalAnd)
+        return tokenof(tt_logicalAnd);
+
+    ifMatch (CL_LogicalOr)
+        return tokenof(tt_logicalOr);
+
+    ifMatch (CL_LogicalXor)
+        return tokenof(tt_logicalXor);
+
+    ifMatch (CL_Coalesce)
+        return tokenof(tt_coalesce);
+
+    ifMatch (CL_Guard)
+        return tokenof(tt_guard);
+
+    // Handle single char operators
+Single:
     switch (c) {
         case CL_Dollar:
-            return tok_new(tt_dollar, lexeme, start);
+            return tokenof(tt_dollar);
 
         case CL_BitAnd:
-            return tok_new(tt_bitAnd, lexeme, start);
+            return tokenof(tt_bitAnd);
 
         case CL_BitOr:
-            return tok_new(tt_bitOr, lexeme, start);
+            return tokenof(tt_bitOr);
 
         case CL_BitXor:
-            return tok_new(tt_bitXor, lexeme, start);
+            return tokenof(tt_bitXor);
 
         case CL_BitNot:
-            return tok_new(tt_bitNot, lexeme, start);
+            return tokenof(tt_bitNot);
 
         case CL_Plus:
-            return tok_new(tt_plus, lexeme, start);
+            return tokenof(tt_plus);
 
         case CL_Minus:
-            return tok_new(tt_minus, lexeme, start);
+            return tokenof(tt_minus);
 
         case CL_Star:
-            return tok_new(tt_star, lexeme, start);
+            return tokenof(tt_star);
 
         case CL_Slash:
-            return tok_new(tt_slash, lexeme, start);
+            return tokenof(tt_slash);
 
         case CL_Percent:
-            return tok_new(tt_percent, lexeme, start);
+            return tokenof(tt_percent);
 
         case CL_LParen:
-            return tok_new(tt_lParen, lexeme, start);
+            return tokenof(tt_lParen);
 
         case CL_RParen:
-            return tok_new(tt_rParen, lexeme, start);
+            return tokenof(tt_rParen);
 
         case CL_Comma:
-            return tok_new(tt_comma, lexeme, start);
+            return tokenof(tt_comma);
 
         case CL_Less:
-            return tok_new(tt_less, lexeme, start);
+            return tokenof(tt_less);
 
         case CL_Greater:
-            return tok_new(tt_greater, lexeme, start);
+            return tokenof(tt_greater);
 
         case CL_Not:
-            return tok_new(tt_not, lexeme, start);
+            return tokenof(tt_not);
 
         case CL_Question:
-            return tok_new(tt_question, lexeme, start);
+            return tokenof(tt_question);
 
         case CL_Colon:
-            return tok_new(tt_colon, lexeme, start);
+            return tokenof(tt_colon);
 
         case CL_Semicolon:
-            return tok_new(tt_semicolon, lexeme, start);
+            return tokenof(tt_semicolon);
 
         case CL_Hash:
             free(cstr);
-            return _lex_hex(lx);
+            return _lex_color(lx);
 
         default:;
     }
+
+#undef ifMatch
+#undef tokenof
+
+    _lex_error(lx, lx->position, 1,
+        "Unexpected character: '%c'", c);
 
     lx->position++;
     return INVALID_TOKEN;
 }
 
-Token _lex_hex(Lexer* lx) {
+Token _lex_color(Lexer* lx) { // TODO
+    return INVALID_TOKEN;
+}
+
+Token _lex_number(Lexer* lx) { // TODO
+    return INVALID_TOKEN;
+}
+
+Token _lex_identifier(Lexer* lx) { // TODO
     return INVALID_TOKEN;
 }
