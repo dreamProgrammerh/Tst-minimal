@@ -7,7 +7,8 @@
 typedef struct Lexer {
     string_t src;
     u32 position;
-    char ch;
 } Lexer;
+
+#define LEXER_CH(lx) (lx->src.data[lx->position])
 
 TokenList* Lexer_lex(Lexer* lx);
