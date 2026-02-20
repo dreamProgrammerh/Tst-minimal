@@ -93,8 +93,8 @@ void _lex_skipComment(Lexer* lx) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Token _lex_color(Lexer* lx);
-Token _lex_number(Lexer* lx);
 Token _lex_identifier(Lexer* lx);
+Token _lex_number(Lexer* lx);
 
 Token _lex_nextTok(Lexer* lx) {
     _lex_skipWhitespace(lx);
@@ -262,14 +262,45 @@ Single:
     return INVALID_TOKEN;
 }
 
-Token _lex_color(Lexer* lx) { // TODO
-    return INVALID_TOKEN;
+Token _lex_color(Lexer* lx) {
+    const u32 start = lx->position;
+    _lex_advancea(lx, CL_Hash);
+
+    while (!_lex_isAtEnd(lx)
+        && CL_isHexDigit(lx->src.data[lx->position]))
+        lx->position++;
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+
+    lexeme[lexLength] = '\0';
+
+    return tok_new(tt_hexColor,
+        (str_t){ .data=lexeme, .length=lexLength }, start);
+}
+
+Token _lex_identifier(Lexer* lx) {
+    const u32 start = lx->position;
+
+    while (!_lex_isAtEnd(lx)
+        && CL_isIdentifierPart(lx->src.data[lx->position]))
+        lx->position++;
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+
+    lexeme[lexLength] = '\0';
+
+    return tok_new(tt_identifier,
+        (str_t){ .data=lexeme, .length=lexLength }, start);
 }
 
 Token _lex_number(Lexer* lx) { // TODO
-    return INVALID_TOKEN;
-}
-
-Token _lex_identifier(Lexer* lx) { // TODO
     return INVALID_TOKEN;
 }
