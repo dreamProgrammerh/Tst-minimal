@@ -118,96 +118,86 @@ typedef struct TokenList {
 
 static inline
 TokenList* toklist_new(const usize capacity,
-    void* (*alloc)(usize),
-    void (*free)(void*)) {
-    TokenList* tl = alloc(sizeof(*tl));
+    void* (*allocFn)(usize),
+    void (*freeFn)(void*)) {
+    TokenList* tl = allocFn(sizeof(TokenList));
     if (tl == NULL) return NULL;
-    
-    tl->tokens = alloc(capacity * sizeof(void*));
+
+    tl->tokens = allocFn(capacity * sizeof(Token));
     if (tl->tokens == NULL) {
-        tl->free(tl);
+        freeFn(tl);
         return NULL;
     }
-    
+
     tl->length = 0;
     tl->capacity = capacity;
-    tl->alloc = alloc;
-    tl->free = free;
-    
+    tl->alloc = allocFn;
+    tl->free = freeFn;
+
     return tl;
 }
 
 static inline
 bool toklist_init(TokenList* tl) {
-    tl->tokens = tl->alloc(tl->capacity * sizeof(void*));
+    tl->tokens = tl->alloc(tl->capacity * sizeof(Token));
     if (tl->tokens == NULL) return false;
-    
+
     tl->length = 0;
     return true;
 }
 
 static inline
 void toklist_free(TokenList* tl) {
-    tl->free(tl->tokens);
-    tl->free(tl);
+    if (tl) {
+        if (tl->tokens) tl->free(tl->tokens);
+        tl->free(tl);
+    }
 }
 
 static inline
 bool _toklist_setCapacity(TokenList* tl, const usize capacity) {
-    Token* tokens = tl->alloc(capacity);
+    Token* tokens = tl->alloc(capacity * sizeof(Token));
     if (!tokens) {
-        printf("TokenList Error: Memory allocation failed during growing.\n");
-        return 1;
+        fprintf(stderr, "TokenList Error: Memory allocation failed during reallocation.\n");
+        return true;  // Return true on failure for easier checking
     }
-    
+
     const usize cpylen = tl->length > capacity ? capacity : tl->length;
-    memcpy(tl->tokens, tokens, cpylen * sizeof(Token));
+    memcpy(tokens, tl->tokens, cpylen * sizeof(Token));
     tl->free(tl->tokens);
-    
+
     tl->tokens = tokens;
     tl->capacity = capacity;
-    return 0;
+    tl->length = cpylen;  // Ensure length doesn't exceed new capacity
+    return false;  // Return false on success
 }
 
 static inline
 bool _toklist_tryGrow(TokenList* tl) {
-    // Grow if length > 90% of capacity
     if (tl->length <= tl->capacity * 0.90) return false;
-    
-    // Grow by 75% of the current capacity
-    const u32 new_capacity = tl->capacity * 1.75;
 
-    if (_toklist_setCapacity(tl, new_capacity))
-        return false;
-
-    return true;
+    const usize new_capacity = tl->capacity * 1.75;
+    return _toklist_setCapacity(tl, new_capacity);  // returns true on failure
 }
 
 static inline
 bool _toklist_tryShrink(TokenList* tl) {
-    // Shrink if length < 25% of capacity
     if (tl->length >= tl->capacity * 0.25) return false;
-    
-    // Shrink by 50% of the current capacity
-    const u32 new_capacity = tl->capacity * 0.50;
 
-    if (_toklist_setCapacity(tl, new_capacity))
-        return false;
-
-    return true;
+    const usize new_capacity = tl->capacity * 0.50;
+    return _toklist_setCapacity(tl, new_capacity);  // returns true on failure
 }
 
 static inline
-Token* toklist_at(const TokenList* tl, const u32 index) {
+Token* toklist_at(const TokenList* tl, const usize index) {
     if (tl->tokens == NULL || index >= tl->length) return NULL;
-
-    return tl->tokens + index;
+    return &tl->tokens[index];  // Return pointer to element
 }
 
 static inline
-bool toklist_set(const TokenList* tl, const u32 index, const Token tok) {
+bool toklist_set(TokenList* tl, const usize index, const Token tok) {
     if (tl->tokens == NULL || index >= tl->length) return false;
-    
+
     tl->tokens[index] = tok;
     return true;
 }
@@ -217,13 +207,15 @@ void toklist_clear(TokenList* tl) {
     if (tl->tokens) {
         tl->free(tl->tokens);
         tl->tokens = NULL;
+        tl->length = 0;
+        tl->capacity = 0;
     }
 }
 
 static inline
 bool toklist_push(TokenList* tl, const Token tok) {
     if (tl->tokens == NULL) return false;
-    if (_toklist_tryGrow(tl)) return false;
+    if (_toklist_tryGrow(tl)) return false;  // true on failure
 
     tl->tokens[tl->length++] = tok;
     return true;
@@ -233,7 +225,8 @@ static inline
 Token toklist_pop(TokenList* tl) {
     if (tl->tokens == NULL || tl->length == 0) return INVALID_TOKEN;
 
-    const Token tok = tl->tokens[tl->length--];
+    tl->length--;  // decrement before accessing
+    const Token tok = tl->tokens[tl->length];
     _toklist_tryShrink(tl);
     return tok;
 }
