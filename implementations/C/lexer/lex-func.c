@@ -30,7 +30,7 @@ bool _lex_error(Lexer* lx, const u32 start, const u32 len, char* msg, ...) {
     char buffer[256];
 
     va_list args;
-    va_start(args, len);
+    va_start(args, msg);
     vsnprintf(buffer, sizeof(buffer), msg, args);
     va_end(args);
 
@@ -648,4 +648,60 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
 
     return tok_new(type,
         (str_t) { .data=lexeme, .length=lexLength } ,start);
+}
+
+static inline
+usize _lex_countTokensApprox(const char* source, usize length) {
+    usize count = 0;
+    bool in_token = false;
+    bool in_comment = false;
+    bool in_comment_block = false;
+
+    for (usize i = 0; i < length; i++) {
+        char c = source[i];
+
+#define _match1(ch) (c == ch)
+#define _match2(str) (c == str[0] && i + 1 < length && source[i+1] == str[1])
+
+        if (in_comment) {
+            if (_match1('\n')) in_comment = false;
+            continue;
+        }
+
+        if (in_comment_block) {
+            if (_match2("*/")) in_comment_block = false;
+            continue;
+        }
+
+        // Comment detection
+        if (_match2("//")) {
+            in_comment = true;
+            i+=2; // Skip '//'
+            continue;
+        }
+
+        // Comment block detection
+        if (_match2("/*")) {
+            in_comment_block = true;
+            i+=2; // Skip '/*'
+            continue;
+        }
+
+        // Count transitions from whitespace to non-whitespace
+        if (!CL_isWhitespace(c)) {
+            if (!in_token) {
+                count++;  // Start of a new token
+                in_token = true;
+            } else {
+                in_token = false;
+            }
+        }
+
+#undef _match1
+#undef _match2
+
+    }
+
+    // Add a small buffer (10-20%) for safety
+    return (usize)(count * 1.2 + 1);  // +20% +1(eof)
 }
