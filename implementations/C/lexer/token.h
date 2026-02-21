@@ -10,7 +10,7 @@
 // =================================================
 
 typedef enum TokenType {
-  tt_int32, tt_float32, tt_hex, tt_bin, tt_oct,
+  tt_int32, tt_float32, tt_hex, tt_bin, tt_oct, tt_exp,
   tt_hexColor, tt_identifier, tt_dollar,
 
   tt_plus, tt_minus, tt_star, tt_slash, tt_percent, tt_intDiv, tt_power,
@@ -31,7 +31,7 @@ typedef enum TokenType {
 
 static const
 char* TokenType_names[] = {
-    "int32", "float32", "hex", "bin", "oct",
+    "int32", "float32", "hex", "bin", "oct", "exp",
     "hexColor", "identifier", "dollar",
 
     "plus", "minus", "star", "slash", "percent", "intDiv", "power",
@@ -112,10 +112,13 @@ static inline // TODO: complete this
 float tok_asFloat(const Token token) {
     switch (token.type) {
       case tt_float32:
-        return 1.0;
+        return 1.0f;
+
+      case tt_exp:
+        return 1.0f;
         
       default:
-        return 0.0;
+        return 0.0f;
     }
 }
 
@@ -195,17 +198,17 @@ bool _toklist_setCapacity(TokenList* tl, const usize capacity) {
 
 static inline
 bool _toklist_tryGrow(TokenList* tl) {
-    if (tl->length <= tl->capacity * 0.90) return false;
+    if ((float)tl->length <= (float)tl->capacity * 0.90f) return false;
 
-    const usize new_capacity = tl->capacity * 1.75;
+    const usize new_capacity = (float)tl->capacity * 1.75f;
     return _toklist_setCapacity(tl, new_capacity);  // returns true on failure
 }
 
 static inline
 bool _toklist_tryShrink(TokenList* tl) {
-    if (tl->length >= tl->capacity * 0.25) return false;
+    if ((float)tl->length >= (float)tl->capacity * 0.25f) return false;
 
-    const usize new_capacity = tl->capacity * 0.50;
+    const usize new_capacity = (float)tl->capacity * 0.50f;
     return _toklist_setCapacity(tl, new_capacity);  // returns true on failure
 }
 
@@ -216,7 +219,7 @@ Token* toklist_at(const TokenList* tl, const usize index) {
 }
 
 static inline
-bool toklist_set(TokenList* tl, const usize index, const Token tok) {
+bool toklist_set(const TokenList* tl, const usize index, const Token tok) {
     if (tl->tokens == NULL || index >= tl->length) return false;
 
     tl->tokens[index] = tok;

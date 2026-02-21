@@ -586,7 +586,7 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
         }
 
         hasExp = true;
-        type = tt_float32;
+        type = tt_exp;
         lx->position++;
 
         // Optional exponent sign
