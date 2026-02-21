@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../utils/short-types.h"
+#include "../utils/convert.h"
 #include "../utils/strings.h"
 #include <stdio.h>
 #include <string.h>
@@ -85,47 +86,52 @@ u32 tok_end(const Token token) {
     return token.start + token.lexeme.length;
 }
 
-static inline // TODO: complete this
+static inline
 i32 tok_asInt(const Token token) {
     switch (token.type) {
       case tt_int32:
-        return 1;
+        return cvt_decimalToInt(token.lexeme.data, token.lexeme.length);
         
       case tt_hexColor:
-        return 1;
+        bool _;
+        return (i32)cvt_hexStrToColor(token.lexeme.data, token.lexeme.length, &_);
         
       case tt_hex:
-        return 1;
+        return cvt_hexToInt(token.lexeme.data, token.lexeme.length);
         
       case tt_oct:
-        return 1;
+        return cvt_octToInt(token.lexeme.data, token.lexeme.length);
         
       case tt_bin:
-        return 1;
+        return cvt_binToInt(token.lexeme.data, token.lexeme.length);
       
       default:
         return 0;
     }
 }
 
-static inline // TODO: complete this
+static inline
 float tok_asFloat(const Token token) {
     switch (token.type) {
       case tt_float32:
-        return 1.0f;
+        return cvt_floatToFloat(token.lexeme.data, token.lexeme.length);
 
       case tt_exp:
-        return 1.0f;
-        
+        return cvt_expToFloat(token.lexeme.data, token.lexeme.length);
+
       default:
         return 0.0f;
     }
 }
 
-static inline // TODO: complete this
+static inline
 str_t tok_toString(const Token token) {
-    // "${token.type.name}(${token.lexeme.data})"
-    return (str_t){ .data = NULL, .length = 0 };
+    char buf[128];
+
+    const i32 len = snprintf(buf, sizeof(buf),
+        "%s('%s')", TokenType_names[token.type], token.lexeme.data);
+
+    return (str_t){ .data = strdup(buf), .length = (u32)len };
 }
 
 // =================================================
@@ -200,7 +206,7 @@ static inline
 bool _toklist_tryGrow(TokenList* tl) {
     if ((float)tl->length <= (float)tl->capacity * 0.90f) return false;
 
-    const usize new_capacity = (float)tl->capacity * 1.75f;
+    const usize new_capacity = (usize)((float)tl->capacity * 1.75f);
     return _toklist_setCapacity(tl, new_capacity);  // returns true on failure
 }
 
@@ -208,7 +214,7 @@ static inline
 bool _toklist_tryShrink(TokenList* tl) {
     if ((float)tl->length >= (float)tl->capacity * 0.25f) return false;
 
-    const usize new_capacity = (float)tl->capacity * 0.50f;
+    const usize new_capacity = (usize)((float)tl->capacity * 0.50f);
     return _toklist_setCapacity(tl, new_capacity);  // returns true on failure
 }
 
