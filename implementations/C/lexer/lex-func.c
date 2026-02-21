@@ -513,6 +513,117 @@ Token _lex_octalNumber(Lexer* lx, const u32 start) {
         (str_t){ .data=lexeme, .length=lexLength }, start);
 }
 
-Token _lex_decimalNumber(Lexer* lx, const u32 start) { // TODO
-    return INVALID_TOKEN;
+Token _lex_decimalNumber(Lexer* lx, const u32 start) {
+    bool hasDot = false;
+    bool hasExp = false;
+    bool separated = false;
+    TokenType type = tt_int32;
+
+    // Check if starts with dot
+    if (_lex_current(lx) == '.') {
+      hasDot = true;
+      type = tt_float32;
+      lx->position++;
+    }
+
+    while (!_lex_isAtEnd(lx)) {
+      const char c = LEXER_CH(lx);
+
+      if (c == CL_NumberSeparator) {
+        if (separated || lx->position + 1 >= lx->src.length) {
+          _lex_error(lx, lx->position, 1,
+              "Invalid separator in decimal number");
+          return INVALID_TOKEN;
+        }
+
+        separated = true;
+        lx->position++;
+        continue;
+      }
+
+      separated = false;
+
+      // Handle decimal point
+      if (c == '.') {
+        if (hasDot || hasExp) {
+          _lex_error(lx, lx->position, 1, "Unexpected decimal point");
+          return INVALID_TOKEN;
+        }
+
+        hasDot = true;
+        type = tt_float32;
+        lx->position++;
+        continue;
+      }
+
+      // Handle exponent
+      if (c == 'e' || c == 'E') {
+        if (hasExp) {
+          _lex_error(lx, lx->position, 1, "Unexpected exponent");
+          return INVALID_TOKEN;
+        }
+
+        hasExp = true;
+        type = tt_float32;
+        lx->position++;
+
+        // Optional exponent sign
+        if (!_lex_isAtEnd(lx)
+            && (LEXER_CH(lx) == '+' || LEXER_CH(lx) == '-'))
+          lx->position++;
+
+        continue;
+      }
+
+      // if it is a digit, continue parsing
+      if (CL_isDigit(c)) {
+        lx->position++;
+        continue;
+      }
+
+      if (CL_isValidNumberBreak(c))
+        break;
+
+      _lex_error(lx, lx->position, 1, "Invalid decimal digit: '%c'", c);
+      return INVALID_TOKEN;
+
+    }
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+
+    lexeme[lexLength] = '\0';
+
+    // Validate the decimal number
+    if (lexLength == 0) {
+      _lex_error(lx, start, lx->position - start,
+          "Empty number literal");
+      return INVALID_TOKEN;
+    }
+
+    const char last = lx->src.data[lx->position];
+    const char oneLast = lx->src.data[lx->position - 1];
+
+    // Ends with dot '.'
+    if (hasDot && last == '.') {
+      _lex_error(lx, start, lx->position - start,
+          "Incomplete decimal number: '%s'", lexeme);
+      return INVALID_TOKEN;
+    }
+
+    // Ends with exponent 'e?[+-]'
+    if (hasExp &&
+        (last == 'e' || last == 'E' ||
+        ((oneLast == 'e' || oneLast == 'E') &&
+        (last == '+' || last == '-')))) {
+      _lex_error(lx, start, lx->position - start,
+          "Incomplete exponent in: '%s'", lexeme);
+      return INVALID_TOKEN;
+    }
+
+    return tok_new(type,
+        (str_t) { .data=lexeme, .length=lexLength } ,start);
 }
