@@ -17,10 +17,15 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
+typedef float f32;
+typedef double f64;
+
 #if ARCH_is64BIT
     typedef u64 usize;
     typedef i64 isize;
+    typedef f64 fsize;
 #elif ARCH_is32BIT
     typedef u32 usize;
     typedef i32 isize;
+    typedef f32 fsize;
 #endif
