@@ -23,7 +23,340 @@ int _cvt_hexCharToInt(const char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
     if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+    return -1;
+}
+
+// ================================
+// HEX TO ARGB COLOR
+// ================================
+
+typedef u32 ArgbColor;
+
+/**
+ * Converts a hex integer to ARGB color format.
+ * Supports various input formats:
+ * - 0x0 to 0xF                 -> Single digit grayscale (expanded to 0xFFCCCCCC)
+ * - 0x00 to 0xFF               -> Grayscale + Alpha (0xAACCCCCC)
+ * - 0x000 to 0xFFF             -> 3-digit RGB (0xFFRRGGBB)
+ * - 0x0000 to 0xFFFF           -> 4-digit RGBA (0xAARRGGBB)
+ * - 0x000000 to 0xFFFFFF       -> 6-digit RRGGBB (0xFFRRGGBB)
+ * - 0x00000000 to 0xFFFFFFFF   -> 8-digit RRGGBBAA (0xAARRGGBB)
+ */
+static inline
+ArgbColor cvt_hexToColor(const u32 value) {
+    // Single digit grayscale (0xC -> 0xFFCCCCCC)
+    if (value <= 0xF) {
+        const u32 c = value * 0x11;  // Expand 0xC to 0xCC
+        return 0xFF000000 | (c << 16) | (c << 8) | c;
+    }
+
+    // Alpha + grayscale (0xCA -> 0xAACCCCCC)
+    if (value <= 0xFF) {
+        const u32 c = ((value >> 4) & 0xF) * 0x11;
+        const u32 a = (value & 0xF) * 0x11;
+        return (a << 24) | (c << 16) | (c << 8) | c;
+    }
+
+    // 3-digit RGB (0xRGB -> 0xFFRRGGBB)
+    if (value <= 0xFFF) {
+        const u32 r = ((value >> 8) & 0xF) * 0x11;
+        const u32 g = ((value >> 4) & 0xF) * 0x11;
+        const u32 b = (value & 0xF) * 0x11;
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    // 4-digit RGBA (0xRGBA -> 0xAARRGGBB)
+    if (value <= 0xFFFF) {
+        const u32 r = ((value >> 12) & 0xF) * 0x11;
+        const u32 g = ((value >> 8) & 0xF) * 0x11;
+        const u32 b = ((value >> 4) & 0xF) * 0x11;
+        const u32 a = (value & 0xF) * 0x11;
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    // 6-digit RGB (0xRRGGBB -> 0xFFRRGGBB)
+    if (value <= 0xFFFFFF) {
+        return 0xFF000000 | value;
+    }
+
+    // 8-digit ARGB (0xRRGGBBAA -> 0xAARRGGBB)
+    if (value <= 0xFFFFFFFF) {
+        // Convert from RRGGBBAA to AARRGGBB
+        const u32 rrggbb = value >> 8;
+        const u32 aa = (value & 0xFF) << 24;
+        return aa | rrggbb;
+    }
+
     return 0;
+}
+
+/**
+ * Converts a hex integer to ARGB color, assuming ARGB input format.
+ * Supports various input formats:
+ * - 0x0 to 0xF                 -> Single digit grayscale (expanded to 0xFFCCCCCC)
+ * - 0x00 to 0xFF               -> Alpha + grayscale (0xAACCCCCC)
+ * - 0x000 to 0xFFF             -> 3-digit RGB (0xFFRRGGBB)
+ * - 0x0000 to 0xFFFF           -> 4-digit ARGB (0xAARRGGBB)
+ * - 0x000000 to 0xFFFFFF       -> 6-digit RRGGBB (0xFFRRGGBB)
+ * - 0x00000000 to 0xFFFFFFFF   -> 8-digit AARRGGBB (0xAARRGGBB)
+ */
+static inline
+ArgbColor cvt_hexToColorARGB(const u32 value) {
+    // Single digit grayscale (0xC -> 0xFFCCCCCC)
+    if (value <= 0xF) {
+        const u32 c = value * 0x11;  // Expand 0xC to 0xCC
+        return 0xFF000000 | (c << 16) | (c << 8) | c;
+    }
+
+    // Alpha + grayscale (0xAC -> 0xAACCCCCC)
+    if (value <= 0xFF) {
+        const u32 a = ((value >> 4) & 0xF) * 0x11;
+        const u32 c = (value & 0xF) * 0x11;
+        return (a << 24) | (c << 16) | (c << 8) | c;
+    }
+
+    // 3-digit RGB (0xRGB -> 0xFFRRGGBB)
+    if (value <= 0xFFF) {
+        const u32 r = ((value >> 8) & 0xF) * 0x11;
+        const u32 g = ((value >> 4) & 0xF) * 0x11;
+        const u32 b = (value & 0xF) * 0x11;
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    // 4-digit RGBA (0xARGB -> 0xAARRGGBB)
+    if (value <= 0xFFFF) {
+        const u32 a = ((value >> 12) & 0xF) * 0x11;
+        const u32 r = ((value >> 8) & 0xF) * 0x11;
+        const u32 g = ((value >> 4) & 0xF) * 0x11;
+        const u32 b = (value & 0xF) * 0x11;
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    // 6-digit RGB (0xRRGGBB -> 0xFFRRGGBB)
+    if (value <= 0xFFFFFF) {
+        return 0xFF000000 | value;
+    }
+
+    // For AARRGGBB format, 8-digit is already correct
+    return value;
+}
+
+// ================================
+// STRING TO ARGB COLOR
+// ================================
+
+/**
+ * Parses a hex color string to ARGB color value.
+ * Supports formats:
+ * - "C"           -> 0xFFCCCCCC (single digit grayscale)
+ * - "CA"          -> 0xAACCCCCC (alpha + grayscale)
+ * - "RGB"         -> 0xFFRRGGBB (3-digit color)
+ * - "RGBA"        -> 0xAARRGGBB (4-digit color with alpha)
+ * - "RRGGBB"      -> 0xFFRRGGBB (6-digit color)
+ * - "RRGGBBAA"    -> 0xAARRGGBB (8-digit color)
+ *
+ * Also supports optional "#" prefix and underscores as separators.
+ * Returns 0 on error (since 0 is a valid color? Maybe use error flag)
+ */
+static inline
+ArgbColor cvt_hexStrToColor(const char* str, const usize len, bool* success) {
+    if (!str || len == 0) {
+        if (success) *success = false;
+        return 0;
+    }
+
+    // Skip optional '#' prefix
+    usize i = str[0] == '#';
+
+    // Skip underscores and spaces, collect valid hex digits
+    char digits[16];  // Max 8 hex digits + null
+    usize digit_count = 0;
+
+    for (; i < len && digit_count < 16; i++) {
+        const char c = str[i];
+        if (c == '_') continue;  // Skip separators
+
+        if (_cvt_hexCharToInt(c) != -1) {
+            digits[digit_count++] = c;
+
+        } else {
+            // Invalid character
+            if (success) *success = false;
+            return 0;
+        }
+    }
+
+    if (digit_count == 0) {
+        if (success) *success = false;
+        return 0;
+    }
+
+    // Process based on digit count
+    char expanded[9] = {0};  // 8 digits + null
+    ArgbColor result = 0;
+
+    switch (digit_count) {
+        case 1:  // C -> ffCCCCCC
+            expanded[0] = 'f'; expanded[1] = 'f';
+            expanded[2] = digits[0]; expanded[3] = digits[0];
+            expanded[4] = digits[0]; expanded[5] = digits[0];
+            expanded[6] = digits[0]; expanded[7] = digits[0];
+            break;
+
+        case 2:  // CA -> AACCCCCC
+            expanded[0] = digits[1]; expanded[1] = digits[1];
+            expanded[2] = digits[0]; expanded[3] = digits[0];
+            expanded[4] = digits[0]; expanded[5] = digits[0];
+            expanded[6] = digits[0]; expanded[7] = digits[0];
+            break;
+
+        case 3:  // RGB -> ffRRGGBB
+            expanded[0] = 'f'; expanded[1] = 'f';
+            expanded[2] = digits[0]; expanded[3] = digits[0];
+            expanded[4] = digits[1]; expanded[5] = digits[1];
+            expanded[6] = digits[2]; expanded[7] = digits[2];
+            break;
+
+        case 4:  // RGBA -> AARRGGBB
+            expanded[0] = digits[3]; expanded[1] = digits[3];
+            expanded[2] = digits[0]; expanded[3] = digits[0];
+            expanded[4] = digits[1]; expanded[5] = digits[1];
+            expanded[6] = digits[2]; expanded[7] = digits[2];
+            break;
+
+        case 6:  // RRGGBB -> ffRRGGBB
+            expanded[0] = 'f'; expanded[1] = 'f';
+            expanded[2] = digits[0]; expanded[3] = digits[1];
+            expanded[4] = digits[2]; expanded[5] = digits[3];
+            expanded[6] = digits[4]; expanded[7] = digits[5];
+            break;
+
+        case 8:  // RRGGBBAA -> already correct format
+            expanded[0] = digits[6]; expanded[1] = digits[7];
+            expanded[2] = digits[0]; expanded[3] = digits[1];
+            expanded[4] = digits[2]; expanded[5] = digits[3];
+            expanded[6] = digits[4]; expanded[7] = digits[5];
+            break;
+
+        default:
+            if (success) *success = false;
+            return 0;  // Invalid length
+    }
+
+    // Convert expanded hex string to integer
+    for (int j = 0; j < 8; j++) {
+        result = (result << 4) | _cvt_hexCharToInt(expanded[j]);
+    }
+
+    if (success) *success = true;
+    return result;
+}
+
+/**
+ * Parses a hex color string assuming ARGB input format, to ARGB color value.
+ * Supports formats:
+ * - "C"           -> 0xFFCCCCCC (single digit grayscale)
+ * - "CA"          -> 0xAACCCCCC (alpha + grayscale)
+ * - "RGB"         -> 0xFFRRGGBB (3-digit color)
+ * - "ARGB"        -> 0xAARRGGBB (4-digit color with alpha)
+ * - "RRGGBB"      -> 0xFFRRGGBB (6-digit color)
+ * - "AARRGGBB"    -> 0xAARRGGBB (8-digit color)
+ *
+ * Also supports optional "#" prefix and underscores as separators.
+ * Returns 0 on error (since 0 is a valid color? Maybe use error flag)
+ */
+static inline
+ArgbColor cvt_hexStrToColorARGB(const char* str, const usize len, bool* success) {
+    if (!str || len == 0) {
+        if (success) *success = false;
+        return 0;
+    }
+
+    // Skip optional '#' prefix
+    usize i = str[0] == '#';
+
+    // Skip underscores and spaces, collect valid hex digits
+    char digits[16];  // Max 8 hex digits + null
+    usize digit_count = 0;
+
+    for (; i < len && digit_count < 16; i++) {
+        const char c = str[i];
+        if (c == '_') continue;  // Skip separators
+
+        if (_cvt_hexCharToInt(c) != -1) {
+            digits[digit_count++] = c;
+
+        } else {
+            // Invalid character
+            if (success) *success = false;
+            return 0;
+        }
+    }
+
+    if (digit_count == 0) {
+        if (success) *success = false;
+        return 0;
+    }
+
+    // Process based on digit count
+    char expanded[9] = {0};  // 8 digits + null
+    ArgbColor result = 0;
+
+    switch (digit_count) {
+        case 1:  // C -> ffCCCCCC
+            expanded[0] = 'f'; expanded[1] = 'f';
+            expanded[2] = digits[0]; expanded[3] = digits[0];
+            expanded[4] = digits[0]; expanded[5] = digits[0];
+            expanded[6] = digits[0]; expanded[7] = digits[0];
+            break;
+
+        case 2:  // AC -> AACCCCCC
+            expanded[0] = digits[0]; expanded[1] = digits[0];
+            expanded[2] = digits[1]; expanded[3] = digits[1];
+            expanded[4] = digits[1]; expanded[5] = digits[1];
+            expanded[6] = digits[1]; expanded[7] = digits[1];
+            break;
+
+        case 3:  // RGB -> ffRRGGBB
+            expanded[0] = 'f'; expanded[1] = 'f';
+            expanded[2] = digits[0]; expanded[3] = digits[0];
+            expanded[4] = digits[1]; expanded[5] = digits[1];
+            expanded[6] = digits[2]; expanded[7] = digits[2];
+            break;
+
+        case 4:  // ARGB -> AARRGGBB
+            expanded[0] = digits[0]; expanded[1] = digits[0];
+            expanded[2] = digits[1]; expanded[3] = digits[1];
+            expanded[4] = digits[2]; expanded[5] = digits[2];
+            expanded[6] = digits[3]; expanded[7] = digits[3];
+            break;
+
+        case 6:  // RRGGBB -> ffRRGGBB
+            expanded[0] = 'f'; expanded[1] = 'f';
+            expanded[2] = digits[0]; expanded[3] = digits[1];
+            expanded[4] = digits[2]; expanded[5] = digits[3];
+            expanded[6] = digits[4]; expanded[7] = digits[5];
+            break;
+
+        case 8:  // RRGGBBAA -> already correct format
+            expanded[0] = digits[0]; expanded[1] = digits[1];
+            expanded[2] = digits[2]; expanded[3] = digits[3];
+            expanded[4] = digits[4]; expanded[5] = digits[5];
+            expanded[6] = digits[6]; expanded[7] = digits[7];
+            break;
+
+        default:
+            if (success) *success = false;
+            return 0;  // Invalid length
+    }
+
+    // Convert expanded hex string to integer
+    for (int j = 0; j < 8; j++) {
+        result = (result << 4) | _cvt_hexCharToInt(expanded[j]);
+    }
+
+    if (success) *success = true;
+    return result;
 }
 
 // ================================
