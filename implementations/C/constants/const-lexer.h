@@ -10,54 +10,54 @@
 // Array length of
 #define lenof(x) (sizeof(x) / sizeof(x[0]))
 
-final char CL_whitespaces[] = " \t\v\r\f\n";
-final char CL_newline[2] = OS_NEWLINE;
+#define CL_whitespaces " \t\v\r\f\n"
+#define CL_newline OS_NEWLINE
 
-final char CL_LineComment[2] = "//";
-final char CL_BlockCommentStart[2] = "/*";
-final char CL_BlockCommentEnd[2] = "*/";
+#define CL_LineComment "//"
+#define CL_BlockCommentStart "/*"
+#define CL_BlockCommentEnd "*/"
 
-final char CL_NumberSeparator = '_';
+#define CL_NumberSeparator '_'
 
-final char CL_RotateLeft[3] = "<<<";
-final char CL_RotateRight[3] = ">>>";
-final char CL_ShiftLeft[2] = "<<";
-final char CL_ShiftRight[2] = ">>";
-final char CL_IntDiv[2] = "/%";
-final char CL_Power[2] = "**";
-final char CL_StrictEqual[3] = "===";
-final char CL_StrictNotEqual[3] = "!==";
-final char CL_ApproxEqual[3] = "~==";
-final char CL_NotApproxEqual[3] = "!~=";
-final char CL_EqualEqual[2] = "==";
-final char CL_NotEqual[2] = "!=";
-final char CL_LessEqual[2] = "<=";
-final char CL_GreaterEqual[2] = ">=";
-final char CL_LogicalAnd[2] = "&&";
-final char CL_LogicalOr[2] = "||";
-final char CL_LogicalXor[2] = "^^";
-final char CL_Coalesce[2] = "??";
-final char CL_Guard[2] = "!!";
-final char CL_Dollar = '$';
-final char CL_BitAnd = '&';
-final char CL_BitOr = '|';
-final char CL_BitXor = '^';
-final char CL_BitNot = '~';
-final char CL_Plus = '+';
-final char CL_Minus = '-';
-final char CL_Star = '*';
-final char CL_Slash = '/';
-final char CL_Percent = '%';
-final char CL_LParen = '(';
-final char CL_RParen = ')';
-final char CL_Comma = ',';
-final char CL_Less = '<';
-final char CL_Greater = '>';
-final char CL_Not = '!';
-final char CL_Question = '?';
-final char CL_Colon = ':';
-final char CL_Semicolon = ';';
-final char CL_Hash = '#';
+#define CL_RotateLeft "<<<"
+#define CL_RotateRight ">>>"
+#define CL_ShiftLeft "<<"
+#define CL_ShiftRight ">>"
+#define CL_IntDiv "/%"
+#define CL_Power "**"
+#define CL_StrictEqual "==="
+#define CL_StrictNotEqual "!=="
+#define CL_ApproxEqual "~=="
+#define CL_NotApproxEqual "!~="
+#define CL_EqualEqual "=="
+#define CL_NotEqual "!="
+#define CL_LessEqual "<="
+#define CL_GreaterEqual ">="
+#define CL_LogicalAnd "&&"
+#define CL_LogicalOr "||"
+#define CL_LogicalXor "^^"
+#define CL_Coalesce "??"
+#define CL_Guard "!!"
+#define CL_Dollar '$'
+#define CL_BitAnd '&'
+#define CL_BitOr '|'
+#define CL_BitXor '^'
+#define CL_BitNot '~'
+#define CL_Plus '+'
+#define CL_Minus '-'
+#define CL_Star '*'
+#define CL_Slash '/'
+#define CL_Percent '%'
+#define CL_LParen '('
+#define CL_RParen ')'
+#define CL_Comma ','
+#define CL_Less '<'
+#define CL_Greater '>'
+#define CL_Not '!'
+#define CL_Question '?'
+#define CL_Colon ':'
+#define CL_Semicolon ';'
+#define CL_Hash '#'
 
 static const
 char CL_Operators1[] = {

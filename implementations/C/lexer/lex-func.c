@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "token.h"
 #include "lexer.h"
@@ -24,7 +25,18 @@ char _lex_peek(const Lexer* lx, const u32 offset) {
 }
 
 bool _lex_error(Lexer* lx, const u32 start, const u32 len, char* msg, ...) {
-  return false;
+    // TODO: replace this with error reporter atteched to lexer
+
+    char buffer[256];
+
+    va_list args;
+    va_start(args, len);
+    vsnprintf(buffer, sizeof(buffer), msg, args);
+    va_end(args);
+
+    fprintf(stderr, "Error: %s\n  at %u-%u\n", buffer, start, start + len);
+    fflush(stderr);
+    return true;
 }
 
 bool _lex_match(Lexer* lx, const char* s, const u32 len) {
@@ -108,9 +120,10 @@ Token _lex_nextTok(Lexer* lx) {
     const char c = _lex_current(lx);
     const u32 start = lx->position;
 
-    char* cstr = malloc(2);
-    cstr[0] = c;
-    cstr[1] = '\0';
+    char* cstr = malloc(4);
+    cstr[0] = _lex_peek(lx, 0);
+    cstr[1] = _lex_peek(lx, 1);
+    cstr[2] = _lex_peek(lx, 2);
 
     const str_t lexeme = (str_t) { .data = cstr, .length = 1};
 
@@ -123,13 +136,15 @@ Token _lex_nextTok(Lexer* lx) {
     if (CL_isIdentifierStart(c))
         return _lex_identifier(lx);
 
-    if (CL_isWhitespace(_lex_peek(lx, 1)))
+    if (CL_isWhitespace(cstr[1]))
         goto Single;
 
-    if (CL_isWhitespace(_lex_peek(lx, 2)))
+    if (CL_isWhitespace(cstr[2]))
         goto Double;
 
     // Handle triple char operators
+    cstr[3] = '\0';
+
     ifMatch (CL_RotateLeft)
         return tokenof(tt_rotLeft);
 
@@ -150,6 +165,8 @@ Token _lex_nextTok(Lexer* lx) {
 
     // Handle double char operators
 Double:
+    cstr[2] = '\0';
+
     ifMatch (CL_ShiftLeft)
         return tokenof(tt_shiftLeft);
 
@@ -191,6 +208,9 @@ Double:
 
     // Handle single char operators
 Single:
+    cstr[1] = '\0';
+
+    lx->position++;
     switch (c) {
         case CL_Dollar:
             return tokenof(tt_dollar);
@@ -251,9 +271,11 @@ Single:
 
         case CL_Hash:
             free(cstr);
+            lx->position--;
             return _lex_color(lx);
 
-        default:;
+        default:
+            lx->position--;
     }
 
 #undef ifMatch
@@ -278,7 +300,7 @@ Token _lex_color(Lexer* lx) {
     char* lexeme = malloc(lexLength + 1);
 
     for (u32 i = 0; i < lexLength; i++)
-        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+        lexeme[i] = lx->src.data[start + i];
 
     lexeme[lexLength] = '\0';
 
@@ -297,7 +319,7 @@ Token _lex_identifier(Lexer* lx) {
     char* lexeme = malloc(lexLength + 1);
 
     for (u32 i = 0; i < lexLength; i++)
-        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+        lexeme[i] = lx->src.data[start + i];
 
     lexeme[lexLength] = '\0';
 
@@ -376,13 +398,13 @@ Token _lex_hexNumber(Lexer* lx, const u32 start) {
     char* lexeme = malloc(lexLength + 1);
 
     for (u32 i = 0; i < lexLength; i++)
-        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+       lexeme[i] = lx->src.data[start + i];
 
     lexeme[lexLength] = '\0';
 
     // Must have at least one hex digit after 0x
     if (lexLength <= 2 ||
-      !CL_isHexDigit(LEXER_CH(lx))) {
+      !CL_isHexDigit(lexeme[lexLength - 1])) {
         _lex_error(lx, start, lx->position - start, "Invalid hex number: '%s'", lexeme);
         return INVALID_TOKEN;
       }
@@ -436,13 +458,13 @@ Token _lex_binaryNumber(Lexer* lx, const u32 start) {
     char* lexeme = malloc(lexLength + 1);
 
     for (u32 i = 0; i < lexLength; i++)
-        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+       lexeme[i] = lx->src.data[start + i];
 
     lexeme[lexLength] = '\0';
 
     // Must have at least one binary digit after 0b
     if (lexLength <= 2 ||
-      !CL_isBinDigit(LEXER_CH(lx))) {
+      !CL_isBinDigit(lexeme[lexLength - 1])) {
         _lex_error(lx, start, lx->position - start, "Invalid binary number: '%s'", lexeme);
         return INVALID_TOKEN;
       }
@@ -497,13 +519,13 @@ Token _lex_octalNumber(Lexer* lx, const u32 start) {
     char* lexeme = malloc(lexLength + 1);
 
     for (u32 i = 0; i < lexLength; i++)
-        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+       lexeme[i] = lx->src.data[start + i];
 
     lexeme[lexLength] = '\0';
 
     // Must have at least one octal digit after 0o
     if (lexLength <= 2 ||
-      !CL_isOctDigit(LEXER_CH(lx))) {
+      !CL_isOctDigit(lexeme[lexLength - 1])) {
         _lex_error(lx, start, lx->position - start,
             "Invalid octal number: '%s'", lexeme);
         return INVALID_TOKEN;
@@ -593,7 +615,7 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
     char* lexeme = malloc(lexLength + 1);
 
     for (u32 i = 0; i < lexLength; i++)
-        lexeme[lexLength - i] = lx->src.data[lx->position - i];
+       lexeme[i] = lx->src.data[start + i];
 
     lexeme[lexLength] = '\0';
 
