@@ -29,6 +29,27 @@ typedef enum TokenType {
   tt_invalid, tt_eof
 } TokenType;
 
+static const
+char* TokenType_names[] = {
+    "int32", "float32", "hex", "bin", "oct",
+    "hexColor", "identifier", "dollar",
+
+    "plus", "minus", "star", "slash", "percent", "intDiv", "power",
+    "bitAnd", "bitOr", "bitXor", "bitNot",
+    "shiftLeft", "shiftRight", "rotLeft", "rotRight",
+    "question", "colon", "semicolon",
+
+    "not", "equalEqual", "notEqual",
+    "strictEqual", "strictNotEqual", "approxEqual", "notApproxEqual",
+    "less", "greater", "lessEqual", "greaterEqual",
+
+    "logicalAnd", "logicalOr", "logicalXor",
+    "coalesce", "guard",
+
+    "lParen", "rParen", "comma",
+    "invalid", "eof"
+};
+
 // =================================================
 // TOKEN
 // =================================================
