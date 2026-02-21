@@ -429,6 +429,161 @@ i32 cvt_octToInt(const char* str, const usize len) {
     return negative ? -result : result;
 }
 
+/**
+ * Parses a mask string with O/I/R notation following these rules:
+ * - 'O' or 'o' : put 0, length determined by next digits or repeated O's
+ * - 'I' or 'i' : put 1, length determined by next digits or repeated I's
+ * - 'R' or 'r' : repeat everything before, length determined by next digits or repeated R's
+ *
+ * Length rules:
+ * - If next char is digit: read all digits for length
+ * - If next action is same: count consecutive same actions for length
+ * - Single action without length spec → length = 1
+ *
+ * Examples:
+ * "0mIIOOr"   → 0b1100
+ * "0mIIOOrr"  → 0b11001100
+ * "0mI2OOr2"  → 0b11001100 (same as previous)
+ */
+static inline
+u32 cvt_maskToInt(const char* str, const usize len) { // TODO: need testing
+    if (!str || len == 0) return 0;
+
+    u64 value = 0;
+    usize bits = 0;
+    bool overflow = false;
+
+    // Skip "0m" or "0M" prefix if present
+    usize i = 0;
+    if (len >= 2 && str[0] == '0' &&
+        (str[1] == 'm' || str[1] == 'M')) {
+        i = 2;
+    }
+
+    // Store the pattern before first R for repeat operations
+    uint64_t pattern_before_r = 0;
+    usize bits_before_r = 0;
+    bool has_pattern = false;
+
+    while (i < len && !overflow) {
+        const char current_action = str[i];
+
+        // Check if it's a valid action
+        if (current_action != 'O' && current_action != 'o' &&
+            current_action != 'I' && current_action != 'i' &&
+            current_action != 'R' && current_action != 'r') {
+            i++;
+            continue;
+        }
+
+        // Determine length
+        usize length = 0;
+
+        if (i + 1 >= len) {
+            // Last character, no lookahead possible
+            length = 1;
+            i++;
+        } else {
+            // Look ahead to see what's next
+            const char next = str[i + 1];
+
+            if ('0' <= next && next <= '9') { // Case 1: Next char is digit - read all digits
+                i++; // Move to first digit
+
+                for (; i < len && '0' <= str[i] && str[i] <= '9'; i++) {
+                    length = length * 10 + (str[i] - '0');
+                }
+
+                // 'i' is now at next action or end
+            } else { // Case 2: Check for repeated same action
+
+                if ((next | 32) != (current_action | 32)) {
+                    // Different action, and no digits -> length = 1
+                    length = 1;
+                    i++; // Move past current action
+
+                } else {
+                    // Count consecutive same actions
+                    length = 1;
+                    i+=2; // Move to next action
+
+                    for (; i < len && (str[i] | 32) == (current_action | 32); i++) {
+                        length++;
+                    }
+
+                    // 'i' is now at next different action or end
+                }
+            }
+        }
+
+        // Now execute the action with determined length
+        switch (current_action) {
+            case 'o': case 'O': {
+                // Put 'length' zeros
+                if (bits + length > 64) {
+                    overflow = true;
+                    break;
+                }
+
+                for (usize j = 0; j < length; j++) {
+                    value = (value << 1) | 0;
+                }
+                bits += length;
+
+                // Update pattern for future R commands
+                pattern_before_r = value;
+                bits_before_r = bits;
+                has_pattern = true;
+                break;
+            }
+
+            case 'i': case 'I': {
+                // Put 'length' ones
+                if (bits + length > 64) {
+                    overflow = true;
+                    break;
+                }
+
+                for (usize j = 0; j < length; j++) {
+                    value = (value << 1) | 1;
+                }
+                bits += length;
+
+                // Update pattern for future R commands
+                pattern_before_r = value;
+                bits_before_r = bits;
+                has_pattern = true;
+                break;
+            }
+
+            case 'r': case 'R': {
+                // Repeat everything before 'length' times
+                if (!has_pattern) {
+                    // No pattern to repeat, do nothing
+                    break;
+                }
+
+                if (bits + (bits_before_r * (length - 1)) > 64) {
+                    overflow = true;
+                    break;
+                }
+
+                // Repeat the pattern (length-1) more times (since we already have it once)
+                for (usize j = 1; j < length; j++) {
+                    value = (value << bits_before_r) | pattern_before_r;
+                    bits += bits_before_r;
+                }
+                break;
+            }
+
+            default:
+                return 0;
+        }
+    }
+
+    return value;
+}
+
 static inline
 i32 cvt_hexToInt(const char* str, const usize len) {
     if (!str || len == 0) return 0;

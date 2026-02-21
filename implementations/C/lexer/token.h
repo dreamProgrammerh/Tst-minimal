@@ -11,7 +11,7 @@
 // =================================================
 
 typedef enum TokenType {
-  tt_int32, tt_float32, tt_hex, tt_bin, tt_oct, tt_exp,
+  tt_int32, tt_float32, tt_hex, tt_bin, tt_oct, tt_mask, tt_exp,
   tt_hexColor, tt_identifier, tt_dollar,
 
   tt_plus, tt_minus, tt_star, tt_slash, tt_percent, tt_intDiv, tt_power,
@@ -32,7 +32,7 @@ typedef enum TokenType {
 
 static const
 char* TokenType_names[] = {
-    "int32", "float32", "hex", "bin", "oct", "exp",
+    "int32", "float32", "hex", "bin", "oct", "mask", "exp",
     "hexColor", "identifier", "dollar",
 
     "plus", "minus", "star", "slash", "percent", "intDiv", "power",
@@ -101,7 +101,10 @@ i32 tok_asInt(const Token token) {
         
       case tt_oct:
         return cvt_octToInt(token.lexeme.data, token.lexeme.length);
-        
+
+      case tt_mask:
+        return (i32)cvt_maskToInt(token.lexeme.data, token.lexeme.length);
+
       case tt_bin:
         return cvt_binToInt(token.lexeme.data, token.lexeme.length);
       

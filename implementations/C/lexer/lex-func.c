@@ -110,6 +110,7 @@ Token _lex_number(Lexer* lx);
 Token _lex_hexNumber(Lexer* lx, u32 start);
 Token _lex_binaryNumber(Lexer* lx, u32 start);
 Token _lex_octalNumber(Lexer* lx, u32 start);
+Token _lex_maskNumber(Lexer* lx, u32 start);
 Token _lex_decimalNumber(Lexer* lx, u32 start);
 
 Token _lex_nextTok(Lexer* lx) {
@@ -345,6 +346,9 @@ Token _lex_number(Lexer* lx) {
             case 'o': case 'O':
                 return _lex_octalNumber(lx, start);
 
+            case 'm': case 'M':
+                return _lex_maskNumber(lx, start);
+
             default:;
         }
     }
@@ -480,7 +484,7 @@ Token _lex_octalNumber(Lexer* lx, const u32 start) {
     if (_lex_isAtEnd(lx) || (CL_isValidNumberBreak(LEXER_CH(lx))
         && LEXER_CH(lx) != CL_NumberSeparator)) {
         _lex_error(lx, start, lx->position - start,
-            "Incomplete hex number: expected digits after 0o");
+            "Incomplete octal number: expected digits after 0o");
         return INVALID_TOKEN;
     }
 
@@ -532,6 +536,68 @@ Token _lex_octalNumber(Lexer* lx, const u32 start) {
       }
 
     return tok_new(tt_oct,
+        (str_t){ .data=lexeme, .length=lexLength }, start);
+}
+
+Token _lex_maskNumber(Lexer* lx, const u32 start) {
+    // Skip '0m' or '0M'
+    lx->position += 2;
+
+    if (_lex_isAtEnd(lx) || (CL_isValidNumberBreak(LEXER_CH(lx))
+        && LEXER_CH(lx) != CL_NumberSeparator)) {
+        _lex_error(lx, start, lx->position - start,
+            "Incomplete mask number: expected digits after 0m");
+        return INVALID_TOKEN;
+    }
+
+    bool separated = false;
+
+    while (!_lex_isAtEnd(lx)) {
+        const char c = LEXER_CH(lx);
+
+        if (c == CL_NumberSeparator) {
+            if (separated || lx->position + 1 >= lx->src.length) {
+                _lex_error(lx, start, lx->position,
+                    "Invalid separator in mask number");
+                return INVALID_TOKEN;
+            }
+
+            separated = true;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isMaskDigit(c)) {
+            separated = false;
+            lx->position++;
+            continue;
+        }
+
+        if (CL_isValidNumberBreak(c))
+            break;
+
+        _lex_error(lx, lx->position, 1, "Invalid mask digit: '%c'", c);
+        return INVALID_TOKEN;
+
+    }
+
+    const u32 lexLength = lx->position - start;
+    char* lexeme = malloc(lexLength + 1);
+
+    for (u32 i = 0; i < lexLength; i++)
+        lexeme[i] = lx->src.data[start + i];
+
+    lexeme[lexLength] = '\0';
+
+    // Must have at least one mask digit after 0m
+    if (lexLength <= 2 ||
+      !CL_isMaskDigit(lexeme[lexLength - 1])) {
+        _lex_error(lx, start, lx->position - start,
+            "Invalid mask number: '%s'", lexeme);
+        return INVALID_TOKEN;
+      }
+
+    return tok_new(tt_mask,
         (str_t){ .data=lexeme, .length=lexLength }, start);
 }
 
@@ -651,7 +717,7 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
 }
 
 static inline
-usize _lex_countTokensApprox(const char* source, usize length) {
+usize _lex_countTokensApprox(const char* source, const usize length) {
     usize count = 0;
     bool in_token = false;
     bool in_comment = false;

@@ -179,3 +179,8 @@ static inline
 bool CL_isHexDigit(const char c) {
     return CL_isDigit(c) || ('a' <= (c | 32) && (c | 32) <= 'f');
 }
+
+static inline
+bool CL_isMaskDigit(const char c) {
+    return CL_isDigit(c) || c == 'i' || c == 'I' || c == 'o' || c == 'O' || c == 'r' || c == 'R';
+}
