@@ -3,8 +3,8 @@
 #include "../utils/short-types.h"
 #include "../utils/convert.h"
 #include "../utils/strings.h"
+#include "../utils/memory.h"
 #include <stdio.h>
-#include <string.h>
 
 // =================================================
 // TOKEN TYPE
@@ -88,12 +88,13 @@ u32 tok_end(const Token token) {
 
 static inline
 i32 tok_asInt(const Token token) {
+    bool _;
+
     switch (token.type) {
       case tt_int32:
         return cvt_decimalToInt(token.lexeme.data, token.lexeme.length);
-        
+
       case tt_hexColor:
-        bool _;
         return (i32)cvt_hexStrToColor(token.lexeme.data, token.lexeme.length, &_);
         
       case tt_hex:
@@ -134,7 +135,10 @@ str_t tok_toString(const Token token) {
     const i32 len = snprintf(buf, sizeof(buf),
         "%s('%s')", TokenType_names[token.type], token.lexeme.data);
 
-    return (str_t){ .data = strdup(buf), .length = (u32)len };
+    char* str = memClone(buf, len);
+    str[len] = '\0';
+
+    return (str_t){ .data = str, .length = (u32)len };
 }
 
 // =================================================
@@ -196,7 +200,7 @@ bool _toklist_setCapacity(TokenList* tl, const usize capacity) {
     }
 
     const usize cpylen = tl->length > capacity ? capacity : tl->length;
-    memcpy(tokens, tl->tokens, cpylen * sizeof(Token));
+    memCopy(tokens, tl->tokens, cpylen * sizeof(Token));
     tl->free(tl->tokens);
 
     tl->tokens = tokens;
