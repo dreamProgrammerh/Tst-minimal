@@ -12,3 +12,7 @@ typedef struct Lexer {
 #define LEXER_CH(lx) (lx->src.data[lx->position])
 
 TokenList* Lexer_lex(Lexer* lx);
+
+Lexer* Lexer_reset(Lexer* lx);
+
+bool Lexer_isFinished(const Lexer* lx);
