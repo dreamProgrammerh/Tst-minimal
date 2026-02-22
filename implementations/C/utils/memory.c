@@ -1,198 +1,207 @@
-/* TODO: need testing */
-
 #include "memory.h"
-#include "platform.h"
 
+#include <stdlib.h>
 #include <string.h>
 
-#if ARCH_isX86_FAMILY
-#   include <immintrin.h>
-#endif
-#if ARCH_isARM_FAMILY && ARCH_hasNEON
-#   include <arm_neon.h>
-#endif
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Core Memory Primitives
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+void memCopy(void* restrict dst, const void* restrict src, const usize size) {
+    if (!size || dst == src) return;
 
-void memCopy(void* src, void* dst, usize size) {
-    if (!size || src == dst) return;
-
-#if ARCH_isX86_64
-    if (size > 256) {
-        usize n = size;
-
-        __asm__ __volatile__(
-            "rep movsb"
-            : "+D"(dst), "+S"(src), "+c"(n)
-            :
-            : "memory"
-        );
+#if defined(__GNUC__) || defined(__clang__)
+    if (__builtin_constant_p(size) && size == 1) {
+        *(u8*)dst = *(const u8*)src;
         return;
     }
 #endif
 
-    if (size >= 128) {
-        memcpy(dst, src, size);
-        return;
-    }
-
-    usize n = size;
-    u8* s = (u8*)src;
-    u8* d = (u8*)dst;
-
-    while (n >= sizeof(u64)) {
-        *(u64*)d = *(u64*)s;
-        d += 8; s += 8; n -= 8;
-    }
-    while (n--) *d++ = *s++;
+    __builtin_memcpy(dst, src, size);
 }
 
-void memSwap(void* memA, void* memB, const usize size) {
-    if (!size || memA == memB) return;
-
-    usize n = size;
-    u8* a = (u8*)memA;
-    u8* b = (u8*)memB;
-
-    while (n >= 8) {
-        const u64 t  = *(u64*)a;
-        *(u64*)a = *(u64*)b;
-        *(u64*)b = t;
-        a += 8; b += 8; n -= 8;
-    }
-    while (n--) {
-        const u8 t = *a;
-        *a++ = *b;
-        *b++ = t;
-    }
+void memMove(void* dst, const void* src, const usize size) {
+    if (!size || dst == src) return;
+    __builtin_memmove(dst, src, size);
 }
 
-void memMove(void* src, void* dst, const usize size) {
-    if (!size || src == dst) return;
+void memSwap(void* a, void* b, usize size) {
+    if (!size || a == b) return;
 
-    memmove(dst, src, size);
-    memset(src, 0, size);
-}
+    u8* p1 = (u8*)a;
+    u8* p2 = (u8*)b;
 
-i32 memCmp(void* src, void* dst, const usize size) {
-    if (src == dst) return 0;
-
-#if ARCH_isX86_FAMILY && ARCH_hasSSE2
-    u8* a = (u8*)src;
-    u8* b = (u8*)dst;
-    usize n = size;
-
-    while (n >= 16) {
-        const __m128i v1 = _mm_loadu_si128((__m128i*)a);
-        const __m128i v2 = _mm_loadu_si128((__m128i*)b);
-        const __m128i cmp = _mm_cmpeq_epi8(v1, v2);
-        if (_mm_movemask_epi8(cmp) != 0xFFFF)
-            return 1;
-        a += 16; b += 16; n -= 16;
+    // Use the largest natural word size possible
+#if ARCH_is64BIT
+    while (size >= 8) {
+        const u64 tmp = *(u64*)p1;
+        *(u64*)p1 = *(u64*)p2;
+        *(u64*)p2 = tmp;
+        p1 += 8; p2 += 8; size -= 8;
     }
-    while (n--) if (*a++ != *b++) return 1;
-    return 0;
-#else
-    return memcmp(src, dst, size) != 0;
-#endif
-}
-
-void memSet(void* src, u8 value, const usize size) {
-#if ARCH_isX86_64
-    if (size > 128) {
-        usize n = size;
-
-        __asm__ __volatile__(
-            "rep stosb"
-            : "+D"(src), "+c"(n)
-            : "a"(value)
-            : "memory"
-        );
-        return;
+#elif ARCH_is32BIT
+    while (size >= 4) {
+        const u32 tmp = *(u32*)p1;
+        *(u32*)p1 = *(u32*)p2;
+        *(u32*)p2 = tmp;
+        p1 += 4; p2 += 4; size -= 4;
     }
 #endif
 
-    memset(src, value, size);
+    // Swap remaining bytes
+    while (size--) {
+        const u8 tmp = *p1;
+        *p1++ = *p2;
+        *p2++ = tmp;
+    }
 }
 
-void memShl(void* src, usize shift, const usize size) {
+void memSet(void* dst, const u8 value, const usize size) {
     if (!size) return;
-    shift %= (size * 8);
-    if (!shift) return;
+    __builtin_memset(dst, value, size);
+}
 
-    u8* p = (u8*)src;
+i32 memCmp(const void* restrict a, const void* restrict b, const usize size) {
+    if (a == b) return 0;
+    return memcmp(a, b, size);
+}
 
-    const usize byteShift = shift >> 3;
-    const usize bitShift  = shift & 7;
 
-    if (byteShift)
-        memmove(p, p + byteShift, size - byteShift),
-        memset(p + size - byteShift, 0, byteShift);
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Allocation Helpers
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void* memClone(const void* src, const usize size) {
+    if (!src || !size) return NULL;
+
+    void* dst = malloc(size);
+    if (!dst) return NULL;
+
+    __builtin_memcpy(dst, src, size);
+    return dst;
+}
+
+void* memCloneWith(const void* src, const usize size, void* (*alloc)(usize)) {
+    if (!src || !size || !alloc) return NULL;
+
+    void* dst = alloc(size);
+    if (!dst) return NULL;
+
+    __builtin_memcpy(dst, src, size);
+    return dst;
+}
+
+void memTransfer(void* dst, void* src, const usize size) {
+    if (!size || dst == src) return;
+
+    __builtin_memmove(dst, src, size);
+    __builtin_memset(src, 0, size);
+}
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Bit-Level Memory Operations
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void memBitShl(void* data, usize bits, const usize size) {
+    if (!size) return;
+
+    bits %= (size * 8);
+    if (!bits) return;
+
+    u8* p = (u8*)data;
+
+    const usize byteShift = bits >> 3;
+    const usize bitShift  = bits & 7;
+
+    if (byteShift) {
+        memMove(p, p + byteShift, size - byteShift);
+        memSet(p + size - byteShift, 0, byteShift);
+    }
 
     if (bitShift) {
-        for (usize i = 0; i < size - 1; ++i)
-            p[i] = (p[i] << bitShift) | (p[i+1] >> (8 - bitShift));
-        p[size-1] <<= bitShift;
+        for (usize i = 0; i < size - 1; ++i) {
+            p[i] = (u8)((p[i] << bitShift) |
+                        (p[i + 1] >> (8 - bitShift)));
+        }
+        p[size - 1] <<= bitShift;
     }
 }
 
-void memShr(void* src, usize shift, const usize size) {
+void memBitShr(void* data, usize bits, const usize size) {
     if (!size) return;
-    shift %= (size * 8);
-    if (!shift) return;
 
-    u8* p = (u8*)src;
+    bits %= (size * 8);
+    if (!bits) return;
 
-    const usize byteShift = shift >> 3;
-    const usize bitShift  = shift & 7;
+    u8* p = (u8*)data;
 
-    if (byteShift)
-        memmove(p + byteShift, p, size - byteShift),
-        memset(p, 0, byteShift);
+    const usize byteShift = bits >> 3;
+    const usize bitShift  = bits & 7;
+
+    if (byteShift) {
+        memMove(p + byteShift, p, size - byteShift);
+        memSet(p, 0, byteShift);
+    }
 
     if (bitShift) {
-        for (usize i = size - 1; i > 0; --i)
-            p[i] = (p[i] >> bitShift) | (p[i-1] << (8 - bitShift));
+        for (usize i = size - 1; i > 0; --i) {
+            p[i] = (u8)((p[i] >> bitShift) |
+                        (p[i - 1] << (8 - bitShift)));
+        }
         p[0] >>= bitShift;
     }
 }
 
-void memRol(void* src, usize rotate, const usize size) {
+void memBitRol(void* data, usize rotate, const usize size) {
     if (!size) return;
+
     rotate %= (size * 8);
     if (!rotate) return;
 
-    u8 tmp[256];
-    if (size <= 256) {
-        memcpy(tmp, src, size);
-    } else {
-        u8* tmpDyn = (u8*)alloca(size);
-        memcpy(tmpDyn, src, size);
-        memcpy(tmp, tmpDyn, size);
-    }
+    u8* p = (u8*)data;
 
-    memShl(src, rotate, size);
-    memShr(tmp, (size * 8) - rotate, size);
+    u8 stackBuf[256];
+    u8* tmp = (size <= sizeof(stackBuf))
+        ? stackBuf
+        : (u8*)malloc(size);
+
+    if (!tmp) return;
+
+    __builtin_memcpy(tmp, p, size);
+
+    memBitShl(p, rotate, size);
+    memBitShr(tmp, (size * 8) - rotate, size);
 
     for (usize i = 0; i < size; ++i)
-        ((u8*)src)[i] |= tmp[i];
+        p[i] |= tmp[i];
+
+    if (tmp != stackBuf)
+        free(tmp);
 }
 
-void memRor(void* src, usize rotate, const usize size) {
+void memBitRor(void* data, usize rotate, const usize size) {
     if (!size) return;
+
     rotate %= (size * 8);
     if (!rotate) return;
 
-    u8 tmp[256];
-    if (size <= 256) {
-        memcpy(tmp, src, size);
-    } else {
-        u8* tmpDyn = (u8*)alloca(size);
-        memcpy(tmpDyn, src, size);
-        memcpy(tmp, tmpDyn, size);
-    }
+    u8* p = (u8*)data;
 
-    memShr(src, rotate, size);
-    memShl(tmp, (size * 8) - rotate, size);
+    u8 stackBuf[256];
+    u8* tmp = (size <= sizeof(stackBuf))
+        ? stackBuf
+        : (u8*)malloc(size);
+
+    if (!tmp) return;
+
+    __builtin_memcpy(tmp, p, size);
+
+    memBitShr(p, rotate, size);
+    memBitShl(tmp, (size * 8) - rotate, size);
 
     for (usize i = 0; i < size; ++i)
-        ((u8*)src)[i] |= tmp[i];
+        p[i] |= tmp[i];
+
+    if (tmp != stackBuf)
+        free(tmp);
 }
