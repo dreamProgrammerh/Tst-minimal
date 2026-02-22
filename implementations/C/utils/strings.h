@@ -12,6 +12,15 @@ typedef struct string_t {
     u32 length;
 } string_t;
 
+typedef struct StringB {
+    char* data;
+    usize length;
+    usize capacity;
+} StringB;
+
+#define str_null ((str_t) { 0 })
+#define string_null ((string_t) { 0 })
+
 static inline
 str_t str_new(char* data, const u32 length) {
     return (str_t){ .data=data, .length=length };
@@ -24,3 +33,9 @@ string_t string_new(const char* data, const u32 length) {
 
 #define str_lit(str) str_new((str), sizeof(str) - 1)
 #define string_lit(str) string_new((str), sizeof(str) - 1)
+
+str_t str_build(u32 length, char* data, ...);
+string_t string_build(u32 length, char* data, ...);
+
+#define str_b(str, ...) str_build(sizeof(str) - 1, str, __VA_ARGS__)
+#define string_b(str, ...) string_build(sizeof(str) - 1, str, __VA_ARGS__)
