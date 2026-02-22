@@ -446,7 +446,7 @@ i32 cvt_octToInt(const char* str, const usize len) {
  * "0mI2OOr2"  → 0b11001100 (same as previous)
  */
 static inline
-u32 cvt_maskToInt(const char* str, const usize len) { // TODO: need testing
+u64 cvt_maskToInt(const char* str, const usize len) {
     if (!str || len == 0) return 0;
 
     u64 value = 0;
@@ -466,58 +466,49 @@ u32 cvt_maskToInt(const char* str, const usize len) { // TODO: need testing
     bool has_pattern = false;
 
     while (i < len && !overflow) {
-        const char current_action = str[i];
+        const char current = str[i];
 
         // Check if it's a valid action
-        if (current_action != 'O' && current_action != 'o' &&
-            current_action != 'I' && current_action != 'i' &&
-            current_action != 'R' && current_action != 'r') {
+        if ((current | 32) != 'o' &&
+            (current | 32) != 'i' &&
+            (current | 32) != 'r') {
             i++;
             continue;
         }
 
+        i++; // Skip valid action
+
         // Determine length
-        usize length = 0;
+        usize length = 1; // 1 valid action
 
-        if (i + 1 >= len) {
-            // Last character, no lookahead possible
-            length = 1;
-            i++;
-        } else {
-            // Look ahead to see what's next
-            const char next = str[i + 1];
+        // If not last character, no lookahead possible
+        if (i < len) {
+            if ('0' <= str[i] && str[i] <= '9') { // Case 1: Char is digit - read all digits
 
-            if ('0' <= next && next <= '9') { // Case 1: Next char is digit - read all digits
-                i++; // Move to first digit
+                // Reset length
+                length = 0;
 
-                for (; i < len && '0' <= str[i] && str[i] <= '9'; i++) {
+                // Read all digits for length
+                do {
                     length = length * 10 + (str[i] - '0');
-                }
+                    i++;
+                } while (i < len && '0' <= str[i] && str[i] <= '9');
 
                 // 'i' is now at next action or end
             } else { // Case 2: Check for repeated same action
 
-                if ((next | 32) != (current_action | 32)) {
-                    // Different action, and no digits -> length = 1
-                    length = 1;
-                    i++; // Move past current action
-
-                } else {
-                    // Count consecutive same actions
-                    length = 1;
-                    i+=2; // Move to next action
-
-                    for (; i < len && (str[i] | 32) == (current_action | 32); i++) {
-                        length++;
-                    }
-
-                    // 'i' is now at next different action or end
+                // Try to find more repeated actions
+                while (i < len && (str[i] | 32) == (current | 32)) {
+                    length++;
+                    i++;
                 }
+
+                // 'i' is now at next different action or end
             }
         }
 
         // Now execute the action with determined length
-        switch (current_action) {
+        switch (current) {
             case 'o': case 'O': {
                 // Put 'length' zeros
                 if (bits + length > 64) {
@@ -581,6 +572,7 @@ u32 cvt_maskToInt(const char* str, const usize len) { // TODO: need testing
         }
     }
 
+    // TODO: need to handle overflow
     return value;
 }
 
