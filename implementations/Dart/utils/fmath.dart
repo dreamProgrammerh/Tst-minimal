@@ -248,10 +248,13 @@ void loadFMathLib() {
   if (_libraryPath == null)
     throw UnsupportedOSError(Platform.operatingSystem.toString());
 
-  else if (! File(_libraryPath!).existsSync())
-    throw MissingLibraryError("fastMath", _libraryPath);
+  final scriptDir = File(Platform.script.toFilePath()).parent.path;
+  final libPath = '$scriptDir/${_libraryPath!}';
 
-  _lib = c.DynamicLibrary.open(_libraryPath!);
+  if (! File(libPath).existsSync())
+    throw MissingLibraryError("fastMath", libPath);
+
+  _lib = c.DynamicLibrary.open(libPath);
 
   _loadFunctions();
   _init();
