@@ -5,6 +5,7 @@ gcc ^
     -o tstm.exe ^
     tstm.c ^
     error/errors.c ^
+    error/reporter.c ^
     lexer/lexer.c ^
     utils/strings.c ^
     utils/memory.c
@@ -16,7 +17,7 @@ set "RESET=[0m"
 
 REM Check if compilation succeeded
 if %ERRORLEVEL% neq 0 (
-    echo %RED%Compilation failed!
+    echo %RED%Compilation failed!%RESET%
     exit /b %ERRORLEVEL%
 )
 
