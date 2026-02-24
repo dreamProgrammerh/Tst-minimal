@@ -2,6 +2,7 @@
 
 #include "../utils/short-types.h"
 #include "../utils/strings.h"
+#include "../program/source.h"
 
 enum SourceErrorKind {
     SE_LexerError
@@ -36,10 +37,10 @@ SourceError serr_new(
 }
 
 static inline
-str_t serr_toString(const SourceError* se) {
-    return str_b("%s(%s) at offset %u",
+string_t serr_toString(const SourceError* se) {
+    return string_b("%s(%s) at offset %u",
         SourceErrorKind_names[se->kind], se->message.data, se->offset);
 }
 
-str_t serr_format(const SourceError* se, string_t src, str_t filename, bool colored);
+string_t serr_format(const SourceError* se, Source src, bool colored);
 

@@ -7,16 +7,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-str_t serr_format(const SourceError* se, const string_t src, const str_t filename, const bool colored) {
-    const str_t fname = filename.data == str_null.data
-        ? str_lit("<anonymous>") : filename;
+string_t serr_format(const SourceError* se, const Source src, const bool colored) {
+    const str_t fname = src.name == NULL
+        ? str_lit("<anonymous>") : str_new(src.name, src.nameLength);
 
     const str_t details = se->details.data == str_null.data
         ? str_lit("( No Details Provided )") : se->details;
 
     // Get required position info
     u32 line, col, lineStart, lineLen;
-    pos_getOffsetInfo(src.data, src.length, se->offset,
+    pos_getOffsetInfo(src.data, src.dataLength, se->offset,
         &line, &col, &lineStart, &lineLen);
 
     const u32 spaceCount = col - 1;
@@ -113,5 +113,5 @@ str_t serr_format(const SourceError* se, const string_t src, const str_t filenam
     free(result);
     free(mem);
 
-    return (str_t) { .data = clone, .length = len };
+    return (string_t) { .data = clone, .length = len };
 }

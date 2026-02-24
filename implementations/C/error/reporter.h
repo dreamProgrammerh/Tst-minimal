@@ -10,7 +10,7 @@
 
 #define REPORTER_NULL ((ErrorReporter) { .flags = REPORT_NULL });
 
-typedef void (*ErrorPrinter)(str_t);
+typedef void (*ErrorPrinter)(string_t);
 
 typedef struct ErrorReporter {
     struct errorsList {
@@ -40,8 +40,8 @@ bool reporter_hasBreakError(const ErrorReporter* reporter) {
 }
 
 void reporter_clear(ErrorReporter* reporter);
-bool reporter_push(ErrorReporter* re, SourceError error, string_t src, str_t filename);
-str_t reporter_formatAll(const ErrorReporter* re, string_t src, str_t filename);
-bool reporter_throwIfAny(const ErrorReporter* re, string_t src, str_t filename);
+bool reporter_push(ErrorReporter* re, SourceError error, Source src);
+string_t reporter_formatAll(const ErrorReporter* re, Source src);
+bool reporter_throwIfAny(const ErrorReporter* re, Source src);
 
-void reporter_defaultPrinter(str_t string);
+void reporter_defaultPrinter(string_t string);

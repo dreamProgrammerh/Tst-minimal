@@ -1,5 +1,6 @@
 #include "reporter.h"
 #include "../utils/memory.h"
+#include "../program/source.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,24 +48,24 @@ void reporter_clear(ErrorReporter* reporter) {
     reporter->errors.capacity = 0;
 }
 
-bool reporter_push(ErrorReporter* re, const SourceError error, string_t src, str_t filename) {
+bool reporter_push(ErrorReporter* re, const SourceError error, const Source src) {
     if (!(re->flags & REPORT_ENABLE)) return false;
     if (re->errors.errs == NULL) return false;
     if (_reporter_tryGrow(re)) return false;
 
     re->errors.errs[re->errors.length++] = error;
     if (re->flags & REPORT_PRINT_IMMEDIATELY) {
-        const str_t str = serr_format(&error, src, filename, (re->flags & REPORT_COLORED) != 0);
+        const string_t str = serr_format(&error, src, (re->flags & REPORT_COLORED) != 0);
         re->printer(str);
     }
 
     return (re->flags & REPORT_BREAK_ON_PUSH) != 0;
 }
-str_t reporter_formatAll(const ErrorReporter* re, const string_t src, const str_t filename) {
+string_t reporter_formatAll(const ErrorReporter* re, const Source src) {
     usize resLength = 0;
-    str_t* errors = malloc(re->errors.length * sizeof(str_t));
+    string_t* errors = malloc(re->errors.length * sizeof(str_t));
 
-    if (!errors) return str_null;
+    if (!errors) return string_null;
 
     // Format all errors
     if (src.data == str_null.data) {
@@ -74,7 +75,7 @@ str_t reporter_formatAll(const ErrorReporter* re, const string_t src, const str_
         }
     } else {
         for (u32 i = 0; i < re->errors.length; i++) {
-            errors[i] = serr_format(&re->errors.errs[i], src, filename, re->flags & REPORT_COLORED);
+            errors[i] = serr_format(&re->errors.errs[i], src, re->flags & REPORT_COLORED);
             resLength += errors[i].length;
         }
     }
@@ -90,12 +91,12 @@ str_t reporter_formatAll(const ErrorReporter* re, const string_t src, const str_
         // Clean up errors before returning
         for (u32 i = 0; i < re->errors.length; i++) free(errors[i].data);
         free(errors);
-        return str_null;
+        return string_null;
     }
 
     char* current = res;
     for (u32 i = 0; i < re->errors.length; i++) {
-        const str_t err = errors[i];
+        const string_t err = errors[i];
 
         // Add separator if not the first error
         if (i != 0) {
@@ -117,20 +118,20 @@ str_t reporter_formatAll(const ErrorReporter* re, const string_t src, const str_
     // Free the errors array
     free(errors);
 
-    return (str_t) { .data=res, .length=resLength };
+    return (string_t) { .data=res, .length=resLength };
 }
 
-bool reporter_throwIfAny(const ErrorReporter* re, const string_t src, const str_t filename) {
+bool reporter_throwIfAny(const ErrorReporter* re, const Source src) {
     if (!reporter_hasErrors(re)) return false;
 
-    const str_t msg = reporter_formatAll(re, src, filename);
+    const string_t msg = reporter_formatAll(re, src);
     re->printer(msg);
     free(msg.data);
 
     return true;
 }
 
-void reporter_defaultPrinter(const str_t string) {
+void reporter_defaultPrinter(const string_t string) {
     for (u32 i = 0; i < string.length; i++)
         putc(string.data[i], stdout);
 
