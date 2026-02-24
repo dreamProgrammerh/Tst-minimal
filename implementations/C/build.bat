@@ -7,6 +7,7 @@ gcc ^
     error/errors.c ^
     error/reporter.c ^
     lexer/lexer.c ^
+    parser/parser.c ^
     utils/strings.c ^
     utils/memory.c
 
