@@ -12,6 +12,7 @@
 // #define NODE_FLAG_CONST (1u << 0) ...
 
 typedef enum NodeKind NodeKind;
+typedef enum OpCode OpCode;
 typedef struct AstNode AstNode;
 typedef struct AstArena AstArena;
 
@@ -33,6 +34,25 @@ enum NodeKind {
     NODE_ASSIGN,        // Assignment
 };
 
+enum OpCode {
+    // Unary
+    OP_NEG, OP_NOT,
+
+    // Binary
+    OP_ADD, OP_SUB,
+    OP_MUL, OP_DIV,
+    OP_EQ, OP_NEQ,
+    OP_AEQ, OP_NAEQ,
+    OP_SEQ, OP_NSEQ,
+    OP_LT, OP_GT,
+    OP_LE, OP_GE,
+    OP_AND, OP_OR,
+    OP_XOR, OP_LXOR,
+    OP_LAND, OP_LOR,
+    OP_SHL, OP_SHR,
+    OP_ROL, OP_ROR,
+};
+
 struct AstNode {
     u16 kind;           // 2 bytes
     u16 flags;          // 2 bytes (constant, used, etc.)
@@ -50,3 +70,12 @@ struct AstArena {
     u32 childCapacity;
     u32 childLength;
 };
+
+AstArena ast_new(u32 nodeCapacity, u32 childCapacity);
+void ast_release(const AstArena* ast);
+
+u32 ast_addNode(AstArena* a, NodeKind kind, u32 startPos);
+void ast_addChild(AstArena *a, u32 parentIndex, u32 childIndex);
+
+AstNode* ast_getNode(const AstArena *a, u32 idx);
+u32 ast_getChild(const AstArena *a, u32 idx);
