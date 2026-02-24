@@ -166,23 +166,18 @@ typedef struct TokenList {
 } TokenList;
 
 static inline
-TokenList* toklist_new(const usize capacity,
+TokenList toklist_new(const usize capacity,
     void* (*allocFn)(usize),
     void (*freeFn)(void*)) {
-    TokenList* tl = allocFn(sizeof(TokenList));
-    if (tl == NULL) return NULL;
+    TokenList tl = {
+        .length = 0,
+        .capacity = capacity,
+        .tokens = NULL,
+        .alloc = allocFn,
+        .free = freeFn,
+    };
 
-    tl->tokens = allocFn(capacity * sizeof(Token));
-    if (tl->tokens == NULL) {
-        freeFn(tl);
-        return NULL;
-    }
-
-    tl->length = 0;
-    tl->capacity = capacity;
-    tl->alloc = allocFn;
-    tl->free = freeFn;
-
+    tl.tokens = allocFn(capacity * sizeof(Token));
     return tl;
 }
 
@@ -196,11 +191,8 @@ bool toklist_init(TokenList* tl) {
 }
 
 static inline
-void toklist_free(TokenList* tl) {
-    if (tl) {
-        if (tl->tokens) tl->free(tl->tokens);
-        tl->free(tl);
-    }
+void toklist_release(const TokenList* tl) {
+    tl->free(tl->tokens);
 }
 
 static inline
