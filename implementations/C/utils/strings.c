@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-str_t str_build(const u32 length, char* data, ...) {
+str_t str_build(const u32 length, const char* data, ...) {
     char* buf = malloc(length + 1024);
 
     va_list args;
@@ -15,9 +15,7 @@ str_t str_build(const u32 length, char* data, ...) {
 
     va_end(args);
 
-    char* str = memClone(buf, len);
-    str[len] = '\0';
-
+    const char* str = memClone(buf, len);
     free(buf);
 
     return (str_t){ .data = str, .length = (u32)len };
@@ -34,8 +32,6 @@ string_t string_build(const u32 length, char* data, ...) {
     va_end(args);
 
     char* str = memClone(buf, len);
-    str[len] = '\0';
-
     free(buf);
 
     return (string_t){ .data = str, .length = (u32)len };
