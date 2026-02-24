@@ -115,16 +115,12 @@ Token _lex_nextTok(Lexer* lx) {
     if (_lex_isAtEnd(lx)) return INVALID_TOKEN;
     const char c = _lex_current(lx);
     const u32 start = lx->position;
-
-    char cstr[4];
-    cstr[0] = _lex_peek(lx, 0);
-    cstr[1] = _lex_peek(lx, 1);
-    cstr[2] = _lex_peek(lx, 2);
-
-    const str_t lexeme = (str_t) { .data = cstr, .length = 1};
+    u32 len = 0;
 
 #define ifMatch(s) if (_lex_matcha(lx, s))
-#define tokenof(type) tok_new(type, lexeme, start)
+#define tokenof(type) tok_new(type, strPool_intern( \
+    lx->program->stringPool, \
+    lx->program->source->data + start, len), start)
 
     if (CL_isNumberStart(c))
         return _lex_number(lx);
@@ -132,14 +128,14 @@ Token _lex_nextTok(Lexer* lx) {
     if (CL_isIdentifierStart(c))
         return _lex_identifier(lx);
 
-    if (CL_isWhitespace(cstr[1]))
+    if (CL_isWhitespace(c))
         goto Single;
 
-    if (CL_isWhitespace(cstr[2]))
+    if (CL_isWhitespace(c))
         goto Double;
 
     // Handle triple char operators
-    cstr[3] = '\0';
+    len = 3;
 
     ifMatch (CL_RotateLeft)
         return tokenof(tt_rotLeft);
@@ -161,7 +157,7 @@ Token _lex_nextTok(Lexer* lx) {
 
     // Handle double char operators
 Double:
-    cstr[2] = '\0';
+    len = 2;
 
     ifMatch (CL_ShiftLeft)
         return tokenof(tt_shiftLeft);
@@ -204,7 +200,7 @@ Double:
 
     // Handle single char operators
 Single:
-    cstr[1] = '\0';
+    len = 1;
 
     lx->position++;
     switch (c) {

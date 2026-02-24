@@ -129,16 +129,28 @@ float tok_asFloat(const Token token) {
 }
 
 static inline
-str_t tok_toString(const Token token) {
+string_t tok_toString(const Token token) {
     char buf[128];
 
     const i32 len = snprintf(buf, sizeof(buf),
-        "%s('%s')", TokenType_names[token.type], token.lexeme.data);
+        "%s('%.*s')", TokenType_names[token.type], (int)token.lexeme.length, token.lexeme.data);
 
     char* str = memClone(buf, len);
-    str[len] = '\0';
 
-    return (str_t){ .data = str, .length = (u32)len };
+    return (string_t){ .data = str, .length = (u32)len };
+}
+
+static inline
+string_t tok_toStringColord(const Token token) {
+    char buf[128];
+
+    const i32 len = snprintf(buf, sizeof(buf),
+        "\x1B[34m%s\x1B[36m(\x1B[32m'%.*s'\x1B[36m)\x1B[0m",
+        TokenType_names[token.type], (int)token.lexeme.length, token.lexeme.data);
+
+    char* str = memClone(buf, len);
+
+    return (string_t){ .data = str, .length = (u32)len };
 }
 
 // =================================================
