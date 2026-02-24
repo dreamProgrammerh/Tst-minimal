@@ -74,25 +74,30 @@ StringHeader* _strPool_headerOfOffset(const StringPool* pool, u32 const offset) 
 }
 
 // Create new string pool
-StringPool* strPool_new(const u32 initialCapacity, const u32 initialHashCapacity) {
-    StringPool* pool = malloc(sizeof(StringPool));
+StringPool strPool_new(const u32 initialCapacity, const u32 initialHashCapacity) {
+    StringPool pool = {
+        .capacity = initialCapacity,
+        .used = 0,
+        .data = NULL,
+
+        .hashCapacity = initialHashCapacity,
+        .hashLength = 0,
+        .hashTable = NULL,
+    };
 
     // String storage
-    pool->capacity = initialCapacity;
-    pool->data = malloc(initialCapacity);
-    pool->used = 0;
+    pool.data = malloc(initialCapacity);
 
-    // Hash table (must be power of two)
-    pool->hashCapacity = initialHashCapacity;
-    pool->hashTable = calloc(initialHashCapacity, sizeof(HashEntry));
-    pool->hashLength = 0;
-    pool->maxLoad = 0.75f;
+    // Hash table
+    pool.hashTable = calloc(initialHashCapacity, sizeof(HashEntry));
 
     return pool;
 }
 
 // Main intern function
 str_t strPool_intern(StringPool* pool, const char* src, const u32 len) {
+    static const f32 POOL_MAX_LOAD = 0.75f;
+
     // 1. Calculate hash
     const u32 hash = _fnv1a_hash(src, len);
 
@@ -127,7 +132,7 @@ str_t strPool_intern(StringPool* pool, const char* src, const u32 len) {
     // 3. Not found - need to add new string
 
     // Check if hash table needs to grow
-    if ((float)pool->hashLength / pool->hashCapacity >= pool->maxLoad) {
+    if ((float)pool->hashLength / pool->hashCapacity >= POOL_MAX_LOAD) {
         _strPool_growHash(pool);
 
         // Recalculate index for new table
@@ -175,7 +180,7 @@ str_t strPool_find(const StringPool* pool, const char* src, const u32 len) {
             const StringHeader* h = _strPool_headerOfOffset(pool, entry->offset);
 
             if (h->len == len) {
-                char* str = _strPool_dataOfOffset(pool, entry->offset);
+                const char* str = _strPool_dataOfOffset(pool, entry->offset);
 
                 if (memCmp(str, src, len) == 0) {
                     return (str_t) { .data = str, .length = len };
@@ -198,9 +203,8 @@ void strPool_reset(StringPool* pool) {
     memSet(pool->hashTable, 0, pool->hashCapacity * sizeof(HashEntry));
 }
 
-// Free everything
-void strPool_destroy(StringPool* pool) {
+// Free everything in pool
+void strPool_release(const StringPool* pool) {
     free(pool->data);
     free(pool->hashTable);
-    free(pool);
 }

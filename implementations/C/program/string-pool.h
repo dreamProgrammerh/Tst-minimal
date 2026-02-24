@@ -31,7 +31,7 @@ struct StringPool {
     f32 maxLoad;        // Typically 0.75
 };
 
-StringPool* strPool_new(u32 initialCapacity, u32 initialHashCapacity);
+StringPool strPool_new(u32 initialCapacity, u32 initialHashCapacity);
 
 // Pool intern function
 str_t strPool_intern(StringPool* pool, const char* src, u32 len);
@@ -42,5 +42,5 @@ str_t strPool_find(const StringPool* pool, const char* src, u32 len);
 // Reset pool for next compilation (reuse memory!)
 void strPool_reset(StringPool* pool);
 
-// Free Pool and everything inside
-void strPool_destroy(StringPool* pool);
+// Free everything inside pool
+void strPool_release(const StringPool* pool);
