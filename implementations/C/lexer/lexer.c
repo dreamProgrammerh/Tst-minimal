@@ -4,6 +4,31 @@
 
 #include <stdlib.h>
 
+bool Lexer_isValid(const Lexer* lx) {
+    if (!lx) {
+        reporter_log(string_lit("Lexer is NULL!"));
+        return false;
+    }
+    if (!lx->program) {
+        reporter_log(string_lit("Lexer have no program!"));
+        return false;
+    }
+    if (!lx->program->source) {
+        reporter_log(string_lit("Lexer have no source!"));
+        return false;
+    }
+    if (!lx->program->stringPool) {
+        reporter_log(string_lit("Lexer have no string pool!"));
+        return false;
+    }
+    if (!lx->program->reporter) {
+        reporter_log(string_lit("Lexer have no reporter!"));
+        return false;
+    }
+
+    return true;
+}
+
 TokenList* Lexer_lex(Lexer* lx) {
     const usize gassed_capacity = _lex_countTokensApprox(lx->program->source->data, lx->program->source->dataLength);
     TokenList* tokens = toklist_new(gassed_capacity, malloc, free);

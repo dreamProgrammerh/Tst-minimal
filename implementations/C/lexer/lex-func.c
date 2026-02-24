@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string.h>
+
 #include "token.h"
 #include "lexer.h"
 #include "../constants/const-lexer.h"
@@ -23,9 +25,9 @@ char _lex_peek(const Lexer* lx, const u32 offset) {
         ? '\0' : lx->program->source->data[lx->position + offset];;
 }
 
-bool _lex_error(const Lexer* lx, const u32 start, const u32 len, char* msg, ...) {
+bool _lex_error(const Lexer* lx, const u32 start, const u32 len, const char* msg, ...) {
     const SourceError err = {
-        .message = msg,
+        .message = str_new(msg, strlen(msg)),
         .details = str_null,
         .offset = start,
         .length = len,
