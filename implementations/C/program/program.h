@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../parser/ast.h"
+#include "../error/reporter.h"
 #include "string-pool.h"
 #include "source.h"
 

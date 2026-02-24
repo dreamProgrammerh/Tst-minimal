@@ -4,10 +4,12 @@ gcc ^
     -O3 ^
     -o tstm.exe ^
     tstm.c ^
+    program/string-pool.c ^
     error/errors.c ^
     error/reporter.c ^
     lexer/lexer.c ^
     parser/parser.c ^
+    parser/ast.c ^
     utils/strings.c ^
     utils/memory.c
 

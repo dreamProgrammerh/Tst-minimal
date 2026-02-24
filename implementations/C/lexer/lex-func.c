@@ -1,47 +1,42 @@
 #pragma once
 
-#include <stdlib.h>
-#include <stdarg.h>
-
 #include "token.h"
 #include "lexer.h"
 #include "../constants/const-lexer.h"
+#include "../error/errors.h"
+#include "../error/reporter.h"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // LEXER HELPERS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 bool _lex_isAtEnd(const Lexer* lx) {
-    return lx->position >= lx->src.length;
+    return lx->position >= lx->program->source->dataLength;
 }
 
 char _lex_current(const Lexer* lx) {
-    return _lex_isAtEnd(lx) ? '\0' : lx->src.data[lx->position];;
+    return _lex_isAtEnd(lx) ? '\0' : lx->program->source->data[lx->position];;
 }
 
 char _lex_peek(const Lexer* lx, const u32 offset) {
-    return (lx->position + offset >= lx->src.length)
-        ? '\0' : lx->src.data[lx->position + offset];;
+    return (lx->position + offset >= lx->program->source->dataLength)
+        ? '\0' : lx->program->source->data[lx->position + offset];;
 }
 
-bool _lex_error(Lexer* lx, const u32 start, const u32 len, char* msg, ...) {
-    // TODO: replace this with error reporter atteched to lexer
+bool _lex_error(const Lexer* lx, const u32 start, const u32 len, char* msg, ...) {
+    const SourceError err = {
+        .message = msg,
+        .details = str_null,
+        .offset = start,
+        .length = len,
+    };
 
-    char buffer[256];
-
-    va_list args;
-    va_start(args, msg);
-    vsnprintf(buffer, sizeof(buffer), msg, args);
-    va_end(args);
-
-    fprintf(stderr, "Error: %s\n  at %u-%u\n", buffer, start, start + len);
-    fflush(stderr);
-    return true;
+    return reporter_push(lx->program->reporter, err, *lx->program->source);
 }
 
 bool _lex_match(Lexer* lx, const char* s, const u32 len) {
     for (u32 i = 0; i < len; i++) {
-        if (lx->src.data[lx->position + i] != s[i])
+        if (lx->program->source->data[lx->position + i] != s[i])
             return false;
     }
     
@@ -51,7 +46,7 @@ bool _lex_match(Lexer* lx, const char* s, const u32 len) {
 
 bool _lex_is(const Lexer* lx, const char* s, const u32 len) {
     for (u32 i = 0; i < len; i++) {
-        if (lx->src.data[lx->position + i] != s[i])
+        if (lx->program->source->data[lx->position + i] != s[i])
             return false;
     }
 
@@ -121,7 +116,7 @@ Token _lex_nextTok(Lexer* lx) {
     const char c = _lex_current(lx);
     const u32 start = lx->position;
 
-    char* cstr = malloc(4);
+    char cstr[4];
     cstr[0] = _lex_peek(lx, 0);
     cstr[1] = _lex_peek(lx, 1);
     cstr[2] = _lex_peek(lx, 2);
@@ -271,7 +266,6 @@ Single:
             return tokenof(tt_semicolon);
 
         case CL_Hash:
-            free(cstr);
             lx->position--;
             return _lex_color(lx);
 
@@ -294,47 +288,47 @@ Token _lex_color(Lexer* lx) {
     _lex_advancea(lx, CL_Hash);
 
     while (!_lex_isAtEnd(lx)
-        && CL_isHexDigit(lx->src.data[lx->position]))
+        && CL_isHexDigit(lx->program->source->data[lx->position]))
         lx->position++;
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-        lexeme[i] = lx->src.data[start + i];
+    // INTERN the string directly from source buffer!
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,  // Point directly into source
+        lexLength
+    );
 
-    lexeme[lexLength] = '\0';
-
-    return tok_new(tt_hexColor,
-        (str_t){ .data=lexeme, .length=lexLength }, start);
+    return tok_new(tt_hexColor, lexeme, start);
 }
 
 Token _lex_identifier(Lexer* lx) {
     const u32 start = lx->position;
 
     while (!_lex_isAtEnd(lx)
-        && CL_isIdentifierPart(lx->src.data[lx->position]))
+        && CL_isIdentifierPart(lx->program->source->data[lx->position]))
         lx->position++;
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-        lexeme[i] = lx->src.data[start + i];
+    // INTERN the identifier directly from source
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,  // Direct pointer into source
+        lexLength
+    );
 
-    lexeme[lexLength] = '\0';
-
-    return tok_new(tt_identifier,
-        (str_t){ .data=lexeme, .length=lexLength }, start);
+    return tok_new(tt_identifier, lexeme, start);
 }
 
 Token _lex_number(Lexer* lx) {
     const u32 start = lx->position;
 
     // Check for base prefixes
-    if (LEXER_CH(lx) == '0' && lx->position + 1 < lx->src.length) {
+    if (LEXER_CH(lx) == '0' && lx->position + 1 < lx->program->source->dataLength) {
         // Next character
-        const char c = lx->src.data[lx->position + 1];
+        const char c = lx->program->source->data[lx->position + 1];
 
         switch (c) {
             case 'x': case 'X':
@@ -374,7 +368,7 @@ Token _lex_hexNumber(Lexer* lx, const u32 start) {
         const char c = LEXER_CH(lx);
 
         if (c == CL_NumberSeparator) {
-            if (separated || lx->position + 1 >= lx->src.length) {
+            if (separated || lx->position + 1 >= lx->program->source->dataLength) {
                 _lex_error(lx, lx->position, 1, "Invalid separator in hex number");
                 return INVALID_TOKEN;
             }
@@ -399,22 +393,21 @@ Token _lex_hexNumber(Lexer* lx, const u32 start) {
     }
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-       lexeme[i] = lx->src.data[start + i];
-
-    lexeme[lexLength] = '\0';
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,
+        lexLength
+    );
 
     // Must have at least one hex digit after 0x
     if (lexLength <= 2 ||
-      !CL_isHexDigit(lexeme[lexLength - 1])) {
-        _lex_error(lx, start, lx->position - start, "Invalid hex number: '%s'", lexeme);
+      !CL_isHexDigit(lexeme.data[lexLength - 1])) {
+        _lex_error(lx, start, lx->position - start, "Invalid hex number: '%.*s'", (int)lexeme.length, lexeme.data);
         return INVALID_TOKEN;
       }
 
-    return tok_new(tt_hex,
-        (str_t){ .data=lexeme, .length=lexLength }, start);
+    return tok_new(tt_hex, lexeme, start);
 }
 
 Token _lex_binaryNumber(Lexer* lx, const u32 start) {
@@ -434,7 +427,7 @@ Token _lex_binaryNumber(Lexer* lx, const u32 start) {
         const char c = LEXER_CH(lx);
 
         if (c == CL_NumberSeparator) {
-            if (separated || lx->position + 1 >= lx->src.length) {
+            if (separated || lx->position + 1 >= lx->program->source->dataLength) {
                 _lex_error(lx, lx->position, 1,
                     "Invalid separator in binary number");
                 return INVALID_TOKEN;
@@ -459,22 +452,22 @@ Token _lex_binaryNumber(Lexer* lx, const u32 start) {
     }
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-       lexeme[i] = lx->src.data[start + i];
-
-    lexeme[lexLength] = '\0';
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,
+        lexLength
+    );
 
     // Must have at least one binary digit after 0b
     if (lexLength <= 2 ||
-      !CL_isBinDigit(lexeme[lexLength - 1])) {
-        _lex_error(lx, start, lx->position - start, "Invalid binary number: '%s'", lexeme);
+      !CL_isBinDigit(lexeme.data[lexLength - 1])) {
+        _lex_error(lx, start, lx->position - start,
+            "Invalid binary number: '%.*s'", (int)lexeme.length, lexeme.data);
         return INVALID_TOKEN;
       }
 
-    return tok_new(tt_bin,
-        (str_t){ .data=lexeme, .length=lexLength }, start);
+    return tok_new(tt_bin, lexeme, start);
 }
 
 Token _lex_octalNumber(Lexer* lx, const u32 start) {
@@ -494,7 +487,7 @@ Token _lex_octalNumber(Lexer* lx, const u32 start) {
         const char c = LEXER_CH(lx);
 
         if (c == CL_NumberSeparator) {
-            if (separated || lx->position + 1 >= lx->src.length) {
+            if (separated || lx->position + 1 >= lx->program->source->dataLength) {
                 _lex_error(lx, start, lx->position,
                     "Invalid separator in octal number");
                 return INVALID_TOKEN;
@@ -520,23 +513,22 @@ Token _lex_octalNumber(Lexer* lx, const u32 start) {
     }
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-       lexeme[i] = lx->src.data[start + i];
-
-    lexeme[lexLength] = '\0';
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,
+        lexLength
+    );
 
     // Must have at least one octal digit after 0o
     if (lexLength <= 2 ||
-      !CL_isOctDigit(lexeme[lexLength - 1])) {
+      !CL_isOctDigit(lexeme.data[lexLength - 1])) {
         _lex_error(lx, start, lx->position - start,
-            "Invalid octal number: '%s'", lexeme);
+            "Invalid octal number: '%.*s'", (int)lexeme.length, lexeme.data);
         return INVALID_TOKEN;
       }
 
-    return tok_new(tt_oct,
-        (str_t){ .data=lexeme, .length=lexLength }, start);
+    return tok_new(tt_oct, lexeme, start);
 }
 
 Token _lex_maskNumber(Lexer* lx, const u32 start) {
@@ -556,7 +548,7 @@ Token _lex_maskNumber(Lexer* lx, const u32 start) {
         const char c = LEXER_CH(lx);
 
         if (c == CL_NumberSeparator) {
-            if (separated || lx->position + 1 >= lx->src.length) {
+            if (separated || lx->position + 1 >= lx->program->source->dataLength) {
                 _lex_error(lx, start, lx->position,
                     "Invalid separator in mask number");
                 return INVALID_TOKEN;
@@ -582,23 +574,22 @@ Token _lex_maskNumber(Lexer* lx, const u32 start) {
     }
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-        lexeme[i] = lx->src.data[start + i];
-
-    lexeme[lexLength] = '\0';
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,
+        lexLength
+    );
 
     // Must have at least one mask digit after 0m
     if (lexLength <= 2 ||
-      !CL_isMaskDigit(lexeme[lexLength - 1])) {
+      !CL_isMaskDigit(lexeme.data[lexLength - 1])) {
         _lex_error(lx, start, lx->position - start,
-            "Invalid mask number: '%s'", lexeme);
+            "Invalid mask number: '%.*s'", (int)lexeme.length, lexeme.data);
         return INVALID_TOKEN;
       }
 
-    return tok_new(tt_mask,
-        (str_t){ .data=lexeme, .length=lexLength }, start);
+    return tok_new(tt_mask, lexeme, start);
 }
 
 Token _lex_decimalNumber(Lexer* lx, const u32 start) {
@@ -618,7 +609,7 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
       const char c = LEXER_CH(lx);
 
       if (c == CL_NumberSeparator) {
-        if (separated || lx->position + 1 >= lx->src.length) {
+        if (separated || lx->position + 1 >= lx->program->source->dataLength) {
           _lex_error(lx, lx->position, 1,
               "Invalid separator in decimal number");
           return INVALID_TOKEN;
@@ -678,12 +669,12 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
     }
 
     const u32 lexLength = lx->position - start;
-    char* lexeme = malloc(lexLength + 1);
 
-    for (u32 i = 0; i < lexLength; i++)
-       lexeme[i] = lx->src.data[start + i];
-
-    lexeme[lexLength] = '\0';
+    const str_t lexeme = strPool_intern(
+        lx->program->stringPool,
+        lx->program->source->data + start,
+        lexLength
+    );
 
     // Validate the decimal number
     if (lexLength == 0) {
@@ -692,13 +683,13 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
       return INVALID_TOKEN;
     }
 
-    const char last = lx->src.data[lx->position];
-    const char oneLast = lx->src.data[lx->position - 1];
+    const char last = lx->program->source->data[lx->position];
+    const char oneLast = lx->program->source->data[lx->position - 1];
 
     // Ends with dot '.'
     if (hasDot && last == '.') {
       _lex_error(lx, start, lx->position - start,
-          "Incomplete decimal number: '%s'", lexeme);
+          "Incomplete decimal number: '%.*s'", (int)lexeme.length, lexeme.data);
       return INVALID_TOKEN;
     }
 
@@ -708,12 +699,11 @@ Token _lex_decimalNumber(Lexer* lx, const u32 start) {
         ((oneLast == 'e' || oneLast == 'E') &&
         (last == '+' || last == '-')))) {
       _lex_error(lx, start, lx->position - start,
-          "Incomplete exponent in: '%s'", lexeme);
+          "Incomplete exponent in: '%.*s'", (int)lexeme.length, lexeme.data);
       return INVALID_TOKEN;
     }
 
-    return tok_new(type,
-        (str_t) { .data=lexeme, .length=lexLength } ,start);
+    return tok_new(type, lexeme,start);
 }
 
 static inline
@@ -724,7 +714,7 @@ usize _lex_countTokensApprox(const char* source, const usize length) {
     bool in_comment_block = false;
 
     for (usize i = 0; i < length; i++) {
-        char c = source[i];
+        const char c = source[i];
 
 #define _match1(ch) (c == ch)
 #define _match2(str) (c == str[0] && i + 1 < length && source[i+1] == str[1])

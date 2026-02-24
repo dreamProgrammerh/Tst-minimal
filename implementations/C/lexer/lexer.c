@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 TokenList* Lexer_lex(Lexer* lx) {
-    const usize gassed_capacity = _lex_countTokensApprox(lx->src.data, lx->src.length);
+    const usize gassed_capacity = _lex_countTokensApprox(lx->program->source->data, lx->program->source->dataLength);
     TokenList* tokens = toklist_new(gassed_capacity, malloc, free);
     
     while (!_lex_isAtEnd(lx)) {
@@ -16,7 +16,7 @@ TokenList* Lexer_lex(Lexer* lx) {
     }
 
     toklist_push(tokens, tok_new(tt_eof, (str_t) { 0 }, lx->position));
-    lx->position = lx->src.length;
+    lx->position = lx->program->source->dataLength;
 
     return tokens;
 }
@@ -27,5 +27,5 @@ Lexer* Lexer_reset(Lexer* lx) {
 }
 
 bool Lexer_isFinished(const Lexer* lx) {
-    return lx->position == lx->src.length;
+    return lx->position == lx->program->source->dataLength;
 }
