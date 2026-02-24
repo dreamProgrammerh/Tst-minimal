@@ -43,5 +43,6 @@ void reporter_clear(ErrorReporter* reporter);
 bool reporter_push(ErrorReporter* re, SourceError error, Source src);
 string_t reporter_formatAll(const ErrorReporter* re, Source src);
 bool reporter_throwIfAny(const ErrorReporter* re, Source src);
+void reporter_log(string_t string);
 
 void reporter_defaultPrinter(string_t string);

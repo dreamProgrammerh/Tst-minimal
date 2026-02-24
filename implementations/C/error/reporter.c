@@ -42,6 +42,8 @@ ErrorReporter reporter_new(const usize capacity, const ErrorPrinter printer, con
 }
 
 void reporter_clear(ErrorReporter* reporter) {
+    if (!reporter) return;
+
     free(reporter->errors.errs);
     reporter->errors.errs = NULL;
     reporter->errors.length = 0;
@@ -49,6 +51,7 @@ void reporter_clear(ErrorReporter* reporter) {
 }
 
 bool reporter_push(ErrorReporter* re, const SourceError error, const Source src) {
+    if (!re) return false;
     if (!(re->flags & REPORT_ENABLE)) return false;
     if (re->errors.errs == NULL) return false;
     if (_reporter_tryGrow(re)) return false;
@@ -62,6 +65,8 @@ bool reporter_push(ErrorReporter* re, const SourceError error, const Source src)
     return (re->flags & REPORT_BREAK_ON_PUSH) != 0;
 }
 string_t reporter_formatAll(const ErrorReporter* re, const Source src) {
+    if (!re) return string_null;
+
     usize resLength = 0;
     string_t* errors = malloc(re->errors.length * sizeof(str_t));
 
@@ -122,6 +127,7 @@ string_t reporter_formatAll(const ErrorReporter* re, const Source src) {
 }
 
 bool reporter_throwIfAny(const ErrorReporter* re, const Source src) {
+    if (!re) return false;
     if (!reporter_hasErrors(re)) return false;
 
     const string_t msg = reporter_formatAll(re, src);
@@ -129,6 +135,11 @@ bool reporter_throwIfAny(const ErrorReporter* re, const Source src) {
     free(msg.data);
 
     return true;
+}
+
+void reporter_log(const string_t string) {
+    if (!string.data) return;
+    fprintf(stderr, "%.*s", (int)string.length, string.data);
 }
 
 void reporter_defaultPrinter(const string_t string) {
