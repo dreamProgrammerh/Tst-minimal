@@ -1,11 +1,13 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "error/errors.h"
 #include "error/reporter.h"
 #include "lexer/lexer.h"
+#include "utils/globals.h"
 
-int main(int argc, char* argv[]) {
+int main(const int argc, char* argv[]) {
+    initGlobals(argc, argv);
+
     Source src = source_of(
         "hello, world #ffe23a2\n"
         " 123 0xffed 0b1101011 0o327316 0miior3 0moi63 12.34 1e5 6e-5 1e+10\n"
@@ -40,5 +42,7 @@ int main(int argc, char* argv[]) {
 
     toklist_release(&tl);
     strPool_release(&pool);
+
+    cleanupGlobals();
     return 0;
 }

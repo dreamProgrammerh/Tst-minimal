@@ -10,6 +10,7 @@ gcc ^
     lexer/lexer.c ^
     parser/parser.c ^
     parser/ast.c ^
+    utils/globals.c ^
     utils/strings.c ^
     utils/memory.c
 
