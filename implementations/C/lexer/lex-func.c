@@ -27,6 +27,7 @@ char _lex_peek(const Lexer* lx, const u32 offset) {
 
 bool _lex_error(const Lexer* lx, const u32 start, const u32 len, const char* msg, ...) {
     const SourceError err = {
+        .kind = SE_LexerError,
         .message = str_new(msg, strlen(msg)),
         .details = str_null,
         .offset = start,

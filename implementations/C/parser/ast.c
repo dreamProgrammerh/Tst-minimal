@@ -36,7 +36,7 @@ void ast_release(const AstArena* ast) {
     free(ast->children);
 }
 
-u32 ast_addNode(AstArena* a, const NodeKind kind, const u32 startPos) {
+NodeId ast_addNode(AstArena* a, const NodeKind kind, const u32 startPos) {
     _ast_tryGrowNodes(a);
 
     const u32 idx = a->nodeLength++;
@@ -52,24 +52,24 @@ u32 ast_addNode(AstArena* a, const NodeKind kind, const u32 startPos) {
     return idx;
 }
 
-void ast_addChild(AstArena *a, const u32 parentIndex, const u32 childIndex) {
+void ast_addChild(AstArena *a, const NodeId parentId, const NodeId childId) {
     _ast_tryGrowChildren(a);
 
-    AstNode *parent = &a->nodes[parentIndex];
+    AstNode *parent = &a->nodes[parentId];
     if (parent->childLength == 0) {
         parent->firstChild = a->childLength;
     }
 
-    a->children[a->childLength++] = childIndex;
+    a->children[a->childLength++] = childId;
     parent->childLength++;
 }
 
-AstNode* ast_getNode(const AstArena *a, const u32 idx) {
-    if (idx >= a->nodeLength) return NULL;
-    return &a->nodes[idx];
+AstNode* ast_getNode(const AstArena *a, const NodeId id) {
+    if (id >= a->nodeLength) return NULL;
+    return &a->nodes[id];
 }
 
-u32 ast_getChild(const AstArena *a, const u32 idx) {
-    if (idx >= a->childLength) return UINT32_MAX;
-    return a->children[idx];
+NodeId ast_getChild(const AstArena *a, const ChildId id) {
+    if (id >= a->childLength) return UINT32_MAX;
+    return a->children[id];
 }

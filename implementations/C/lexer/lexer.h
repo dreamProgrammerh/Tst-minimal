@@ -14,6 +14,8 @@ typedef struct Lexer {
 #define LEXER_LEN(lx) (lx->program->source->dataLength)
 #define LEXER_CH(lx) LEXER_AT(lx, lx->position)
 
+bool Lexer_isValid(const Lexer* lx);
+
 TokenList Lexer_lex(Lexer* lx);
 
 Lexer* Lexer_reset(Lexer* lx);

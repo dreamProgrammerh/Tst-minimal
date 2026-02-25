@@ -5,12 +5,14 @@
 #include "../program/source.h"
 
 enum SourceErrorKind {
-    SE_LexerError
+    SE_LexerError,
+    SE_ParserError,
 };
 
 static const
 char* SourceErrorKind_names[] = {
-    "LexerError"
+    "LexerError",
+    "ParserError"
 };
 
 typedef struct SourceError {

@@ -9,12 +9,16 @@
 #include "../utils/short-types.h"
 
 // TODO: define ast nodes flags
-// #define NODE_FLAG_CONST (1u << 0) ...
+#define NODE_FLAG_CONST     (1u << 0)
+#define NODE_FLAG_NULL      (1u << 1)
 
 typedef enum NodeKind NodeKind;
 typedef enum OpCode OpCode;
 typedef struct AstNode AstNode;
 typedef struct AstArena AstArena;
+
+typedef u32 NodeId;
+typedef u32 ChildId;
 
 // Node types
 enum NodeKind {
@@ -56,7 +60,7 @@ enum OpCode {
 struct AstNode {
     u16 kind;           // 2 bytes
     u16 flags;          // 2 bytes (constant, used, etc.)
-    u32 firstChild;     // Index into children array
+    ChildId firstChild; // Index into children array
     u8 childLength;     // Size of node children
     u32 data;           // Integer literal or string index
     u32 sourcePos;      // For error reporting
@@ -64,18 +68,25 @@ struct AstNode {
 
 struct AstArena {
     AstNode* nodes;         // Flat array of nodes
-    u32* children;          // Child indices
+    NodeId* children;       // Child id's
     u32 nodeCapacity;
     u32 nodeLength;
     u32 childCapacity;
     u32 childLength;
 };
 
+#define AstNode_NULL (AstNode){ .flags = NODE_FLAG_NULL }
+
+static inline
+bool node_isNull(const AstNode* node) {
+    return node->flags == NODE_FLAG_NULL;
+}
+
 AstArena ast_new(u32 nodeCapacity, u32 childCapacity);
 void ast_release(const AstArena* ast);
 
 u32 ast_addNode(AstArena* a, NodeKind kind, u32 startPos);
-void ast_addChild(AstArena *a, u32 parentIndex, u32 childIndex);
+void ast_addChild(AstArena *a, NodeId parentId, NodeId childId);
 
-AstNode* ast_getNode(const AstArena *a, u32 idx);
-u32 ast_getChild(const AstArena *a, u32 idx);
+AstNode* ast_getNode(const AstArena *a, NodeId id);
+NodeId ast_getChild(const AstArena *a, ChildId id);

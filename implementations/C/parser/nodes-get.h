@@ -20,7 +20,7 @@ AstChildren ast_getChildren(const AstArena* arena, const u32 nodeIndex) {
 
 // Get child at index
 static inline
-u32 ast_getChildOf(const AstArena* arena, const u32 nodeIndex, const u32 childIndex) {
+ChildId ast_getChildOf(const AstArena* arena, const u32 nodeIndex, const u32 childIndex) {
     const AstNode* node = &arena->nodes[nodeIndex];
     if (childIndex >= node->childLength) return (u32)-1;
     return arena->children[node->firstChild + childIndex];
